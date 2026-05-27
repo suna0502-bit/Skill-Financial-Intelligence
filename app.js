@@ -1,3 +1,561 @@
+﻿// ==========================================================================
+// Mock Backend (Local Storage DB) to replace Python Flask for GitHub Pages
+// ==========================================================================
+(function() {
+    // 1. Initialize DB
+    function getDb() {
+        let db = localStorage.getItem('financeDB');
+        if (!db) {
+            db = {
+                users: [
+                    { user_id: 1, name: "?踵?" },
+                    { user_id: 2, name: "皜祈岫??B" },
+                    { user_id: 3, name: "皜祈岫??C" }
+                ],
+                transactions: [],
+                savings: [],
+                groups: [],
+                group_members: [],
+                group_expenses: [],
+                last_ids: { user: 3, txn: 0, saving: 0, group: 0, expense: 0 }
+            };
+            localStorage.setItem('financeDB', JSON.stringify(db));
+        } else {
+            db = JSON.parse(db);
+        }
+        return db;
+    }
+
+    function saveDb(db) {
+        localStorage.setItem('financeDB', JSON.stringify(db));
+    }
+
+    function generateId(table) {
+        let db = getDb();
+        db.last_ids[table]++;
+        saveDb(db);
+        return db.last_ids[table];
+    }
+
+    // 2. Finance Utils (Ported from Python)
+    function distribute_expense(total_amount_cents, members, payer_id, split_mode, details) {
+        let n = members.length;
+        if (n === 0) return {};
+        let shares = {};
+        if (split_mode === 'AA') {
+            let base = Math.floor(total_amount_cents / n);
+            let rem = total_amount_cents % n;
+            members.forEach(m => shares[m] = base);
+            if (shares[payer_id] !== undefined) shares[payer_id] += rem;
+            else shares[members[n-1]] += rem;
+        } else if (split_mode === 'ratio') {
+            if (!details) return distribute_expense(total_amount_cents, members, payer_id, 'AA');
+            let total_ratio = 0;
+            members.forEach(m => total_ratio += (parseFloat(details[m]) || 0));
+            if (total_ratio <= 0) return distribute_expense(total_amount_cents, members, payer_id, 'AA');
+            let allocated = 0;
+            members.forEach(m => {
+                let r = parseFloat(details[m]) || 0;
+                let share = Math.floor((total_amount_cents * r) / total_ratio);
+                shares[m] = share;
+                allocated += share;
+            });
+            let rem = total_amount_cents - allocated;
+            if (shares[payer_id] !== undefined) shares[payer_id] += rem;
+            else {
+                let active = members.filter(m => shares[m] > 0);
+                if (active.length > 0) shares[active[active.length-1]] += rem;
+                else shares[members[n-1]] += rem;
+            }
+        } else if (split_mode === 'custom') {
+            if (!details) return distribute_expense(total_amount_cents, members, payer_id, 'AA');
+            let allocated = 0;
+            members.forEach(m => {
+                let share = parseInt(details[m]) || 0;
+                shares[m] = share;
+                allocated += share;
+            });
+            let rem = total_amount_cents - allocated;
+            if (rem !== 0) {
+                if (shares[payer_id] !== undefined) shares[payer_id] += rem;
+                else shares[members[n-1]] += rem;
+            }
+        }
+        return shares;
+    }
+
+    function simplify_debts(balances) {
+        let creditors = [];
+        let debtors = [];
+        for (let u in balances) {
+            let bal = balances[u];
+            if (bal > 0) creditors.push([parseInt(u), bal]);
+            else if (bal < 0) debtors.push([parseInt(u), -bal]);
+        }
+        creditors.sort((a,b) => b[1] - a[1]);
+        debtors.sort((a,b) => b[1] - a[1]);
+
+        let transactions = [];
+        let c_idx = 0;
+        let d_idx = 0;
+        while (c_idx < creditors.length && d_idx < debtors.length) {
+            let creditor = creditors[c_idx];
+            let debtor = debtors[d_idx];
+            let amount = Math.min(creditor[1], debtor[1]);
+            if (amount > 0) {
+                transactions.push({
+                    'from': debtor[0],
+                    'to': creditor[0],
+                    'amount': amount
+                });
+                creditor[1] -= amount;
+                debtor[1] -= amount;
+            }
+            if (creditor[1] === 0) c_idx++;
+            if (debtor[1] === 0) d_idx++;
+        }
+        return transactions;
+    }
+
+    // 3. Mock Response Wrapper
+    function mockResponse(status, data) {
+        return Promise.resolve({
+            ok: status >= 200 && status < 300,
+            status: status,
+            json: () => Promise.resolve(data)
+        });
+    }
+
+    // 4. Intercept Fetch
+    const originalFetch = window.fetch;
+    window.fetch = async function(url, options) {
+        if (!url.startsWith('/api/')) {
+            return originalFetch(url, options);
+        }
+
+        const method = (options?.method || 'GET').toUpperCase();
+        let body = {};
+        if (options?.body) {
+            body = JSON.parse(options.body);
+        }
+        const searchParams = new URLSearchParams(url.split('?')[1] || '');
+        const path = url.split('?')[0];
+
+        // Simulate network delay for realism
+        await new Promise(r => setTimeout(r, 120));
+
+        let db = getDb();
+
+        try {
+            // ==========================================
+            // Users APIs
+            // ==========================================
+            if (path === '/api/users' && method === 'GET') {
+                return mockResponse(200, db.users);
+            }
+            if (path === '/api/users' && method === 'POST') {
+                let name = body.name;
+                if (!name) return mockResponse(400, {error: 'Name is required'});
+                let newId = generateId('user');
+                db = getDb(); // reload after id generation
+                db.users.push({ user_id: newId, name: name });
+                saveDb(db);
+                return mockResponse(201, {user_id: newId, name: name});
+            }
+
+            // ==========================================
+            // Transactions APIs
+            // ==========================================
+            if (path === '/api/transactions' && method === 'POST') {
+                let { user_id, amount, type, category, memo, date } = body;
+                let amount_cents = Math.round(parseFloat(amount) * 100);
+                let txn_id = generateId('txn');
+                db = getDb();
+                db.transactions.push({
+                    txn_id, user_id, amount: amount_cents, type, category, memo: memo || '', date
+                });
+                saveDb(db);
+                return mockResponse(201, { txn_id, user_id, amount, type, category, memo, date });
+            }
+            if (path === '/api/transactions' && method === 'GET') {
+                let user_id = parseInt(searchParams.get('user_id'));
+                let start_date = searchParams.get('start_date');
+                let end_date = searchParams.get('end_date');
+                let category = searchParams.get('category');
+                let type = searchParams.get('type');
+                
+                let txns = db.transactions.filter(t => t.user_id === user_id);
+                if (start_date) txns = txns.filter(t => t.date >= start_date);
+                if (end_date) txns = txns.filter(t => t.date <= end_date);
+                if (category) txns = txns.filter(t => t.category === category);
+                if (type) txns = txns.filter(t => t.type === type);
+                
+                txns.sort((a,b) => b.date.localeCompare(a.date) || b.txn_id - a.txn_id);
+                return mockResponse(200, txns.map(t => ({...t, amount: t.amount / 100.0})));
+            }
+            if (path.match(/^\/api\/transactions\/(\d+)$/) && method === 'DELETE') {
+                let id = parseInt(path.match(/^\/api\/transactions\/(\d+)$/)[1]);
+                db.transactions = db.transactions.filter(t => t.txn_id !== id);
+                saveDb(db);
+                return mockResponse(200, {message: 'Deleted'});
+            }
+            if (path === '/api/transactions/summary' && method === 'GET') {
+                let user_id = parseInt(searchParams.get('user_id'));
+                let start_date = searchParams.get('start_date');
+                let end_date = searchParams.get('end_date');
+                
+                let txns = db.transactions.filter(t => t.user_id === user_id);
+                if (start_date) txns = txns.filter(t => t.date >= start_date);
+                if (end_date) txns = txns.filter(t => t.date <= end_date);
+                
+                let total_income = 0;
+                let total_expense = 0;
+                let cat_totals = {};
+                
+                txns.forEach(t => {
+                    if (t.type === 'income') total_income += t.amount;
+                    else if (t.type === 'expense') {
+                        total_expense += t.amount;
+                        cat_totals[t.category] = (cat_totals[t.category] || 0) + t.amount;
+                    }
+                });
+                
+                let categories = Object.keys(cat_totals).map(k => ({category: k, amount: cat_totals[k]/100.0}));
+                categories.sort((a,b) => b.amount - a.amount);
+                
+                return mockResponse(200, {
+                    total_income: total_income / 100.0,
+                    total_expense: total_expense / 100.0,
+                    net_balance: (total_income - total_expense) / 100.0,
+                    categories: categories
+                });
+            }
+
+            // ==========================================
+            // Savings APIs
+            // ==========================================
+            if (path === '/api/savings' && method === 'POST') {
+                let { user_id, goal_name, target_amount, deadline } = body;
+                let target_cents = Math.round(parseFloat(target_amount) * 100);
+                let goal_id = generateId('saving');
+                db = getDb();
+                db.savings.push({
+                    goal_id, user_id, goal_name, target_amount: target_cents, current_amount: 0, deadline
+                });
+                saveDb(db);
+                return mockResponse(201, {goal_id});
+            }
+            if (path === '/api/savings' && method === 'GET') {
+                let user_id = parseInt(searchParams.get('user_id'));
+                let goals = db.savings.filter(g => g.user_id === user_id);
+                goals.sort((a,b) => a.deadline.localeCompare(b.deadline));
+                
+                let today = new Date();
+                today.setHours(0,0,0,0);
+                
+                let results = goals.map(g => {
+                    let target = g.target_amount / 100.0;
+                    let curr = g.current_amount / 100.0;
+                    let d = new Date(g.deadline);
+                    let days_left = Math.max(0, Math.floor((d - today)/(1000*60*60*24)));
+                    return {
+                        ...g,
+                        target_amount: target,
+                        current_amount: curr,
+                        progress_percent: target > 0 ? parseFloat((curr / target * 100.0).toFixed(2)) : 0,
+                        remaining_amount: Math.max(0, target - curr),
+                        days_left: days_left || 0
+                    };
+                });
+                return mockResponse(200, results);
+            }
+            if (path.match(/^\/api\/savings\/(\d+)\/deposit$/) && method === 'POST') {
+                let goal_id = parseInt(path.match(/^\/api\/savings\/(\d+)\/deposit$/)[1]);
+                let amount_cents = Math.round(parseFloat(body.amount) * 100);
+                let link_ledger = body.link_ledger;
+                
+                let goal = db.savings.find(g => g.goal_id === goal_id);
+                if (!goal) return mockResponse(404, {error: 'Not found'});
+                
+                goal.current_amount += amount_cents;
+                
+                if (link_ledger) {
+                    let d = new Date();
+                    let ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+                    let txn_id = generateId('txn');
+                    db = getDb(); // refresh
+                    db.transactions.push({
+                        txn_id, user_id: goal.user_id, amount: amount_cents, type: 'expense', 
+                        category: '?脰?', memo: `?脰???狡: 摮??{goal.goal_name}?, date: ds
+                    });
+                }
+                saveDb(db);
+                return mockResponse(200, {message: 'Deposited'});
+            }
+
+            // ==========================================
+            // Groups APIs
+            // ==========================================
+            if (path === '/api/groups' && method === 'POST') {
+                let { group_name, members } = body;
+                let group_id = generateId('group');
+                db = getDb();
+                db.groups.push({ group_id, group_name, created_at: new Date().toISOString() });
+                members.forEach(m => {
+                    db.group_members.push({ group_id, user_id: m });
+                });
+                saveDb(db);
+                return mockResponse(201, {group_id, group_name});
+            }
+            if (path === '/api/groups' && method === 'GET') {
+                let groups = [...db.groups].sort((a,b) => b.created_at.localeCompare(a.created_at));
+                groups = groups.map(g => {
+                    let memIds = db.group_members.filter(gm => gm.group_id === g.group_id).map(gm => gm.user_id);
+                    let members = db.users.filter(u => memIds.includes(u.user_id));
+                    return { ...g, members };
+                });
+                return mockResponse(200, groups);
+            }
+            if (path.match(/^\/api\/groups\/(\d+)$/) && method === 'GET') {
+                let group_id = parseInt(path.match(/^\/api\/groups\/(\d+)$/)[1]);
+                let g = db.groups.find(gx => gx.group_id === group_id);
+                if (!g) return mockResponse(404, {error: 'Group not found'});
+                
+                let memIds = db.group_members.filter(gm => gm.group_id === group_id).map(gm => gm.user_id);
+                let members = db.users.filter(u => memIds.includes(u.user_id));
+                
+                let expenses = db.group_expenses.filter(e => e.group_id === group_id);
+                expenses.sort((a,b) => b.date.localeCompare(a.date) || b.expense_id - a.expense_id);
+                
+                expenses = expenses.map(e => {
+                    let payer = db.users.find(u => u.user_id === e.payer_id);
+                    let splits = JSON.parse(e.split_details);
+                    let floatSplits = {};
+                    for(let k in splits) floatSplits[k] = splits[k] / 100.0;
+                    return {
+                        ...e,
+                        payer_name: payer ? payer.name : 'Unknown',
+                        total_amount: e.total_amount / 100.0,
+                        split_details: floatSplits
+                    };
+                });
+                
+                return mockResponse(200, { ...g, members, expenses });
+            }
+            if (path.match(/^\/api\/groups\/(\d+)\/members$/) && method === 'POST') {
+                let group_id = parseInt(path.match(/^\/api\/groups\/(\d+)\/members$/)[1]);
+                let user_ids = body.user_ids || [];
+                user_ids.forEach(uid => {
+                    if (!db.group_members.find(gm => gm.group_id === group_id && gm.user_id === uid)) {
+                        db.group_members.push({ group_id, user_id: uid });
+                    }
+                });
+                saveDb(db);
+                return mockResponse(200, {message: 'Added'});
+            }
+            if (path.match(/^\/api\/groups\/(\d+)\/expenses$/) && method === 'POST') {
+                let group_id = parseInt(path.match(/^\/api\/groups\/(\d+)\/expenses$/)[1]);
+                let { payer_id, total_amount, description, split_mode, members, split_details, date } = body;
+                
+                let total_cents = Math.round(parseFloat(total_amount) * 100);
+                
+                // Convert split_details to expected format for ratio/custom if needed
+                let shares_cents = distribute_expense(total_cents, members, payer_id, split_mode, split_details);
+                
+                let sum_shares = 0;
+                for(let k in shares_cents) sum_shares += shares_cents[k];
+                if (sum_shares !== total_cents) {
+                    return mockResponse(400, {error: 'Split values do not match total'});
+                }
+                
+                let expense_id = generateId('expense');
+                db = getDb();
+                db.group_expenses.push({
+                    expense_id, group_id, payer_id, total_amount: total_cents,
+                    description, split_details: JSON.stringify(shares_cents), date
+                });
+                saveDb(db);
+                return mockResponse(201, { expense_id });
+            }
+            if (path.match(/^\/api\/groups\/(\d+)\/settlement$/) && method === 'GET') {
+                let group_id = parseInt(path.match(/^\/api\/groups\/(\d+)\/settlement$/)[1]);
+                
+                let memIds = db.group_members.filter(gm => gm.group_id === group_id).map(gm => gm.user_id);
+                let members_map = {};
+                db.users.filter(u => memIds.includes(u.user_id)).forEach(u => members_map[u.user_id] = u.name);
+                
+                let expenses = db.group_expenses.filter(e => e.group_id === group_id);
+                
+                let balances = {};
+                for (let u in members_map) balances[u] = 0;
+                
+                expenses.forEach(e => {
+                    let payer = e.payer_id;
+                    let total = e.total_amount;
+                    let splits = JSON.parse(e.split_details);
+                    
+                    if (balances[payer] !== undefined) balances[payer] += total;
+                    for (let u_str in splits) {
+                        let u_id = parseInt(u_str);
+                        if (balances[u_id] !== undefined) balances[u_id] -= splits[u_str];
+                    }
+                });
+                
+                let sum_balances = 0;
+                for (let b in balances) sum_balances += balances[b];
+                
+                let transactions = simplify_debts(balances);
+                
+                let output_txns = transactions.map(tx => ({
+                    from_id: tx.from,
+                    from_name: members_map[tx.from] || `User ${tx.from}`,
+                    to_id: tx.to,
+                    to_name: members_map[tx.to] || `User ${tx.to}`,
+                    amount: tx.amount / 100.0
+                }));
+                
+                let formatted_balances = {};
+                for (let uid in balances) {
+                    formatted_balances[uid] = {
+                        name: members_map[uid],
+                        balance: balances[uid] / 100.0
+                    };
+                }
+                
+                return mockResponse(200, {
+                    group_id,
+                    balances: formatted_balances,
+                    zero_sum_check_cents: sum_balances,
+                    zero_sum_verified: sum_balances === 0,
+                    original_people_count: Object.keys(members_map).length,
+                    transfers_count: output_txns.length,
+                    simplification_metric: `Transfers: ${output_txns.length}`,
+                    settlement_instructions: output_txns
+                });
+            }
+
+            // ==========================================
+            // Stress Test API
+            // ==========================================
+            if (path === '/api/test/stress' && method === 'POST') {
+                let start_time = performance.now();
+                db = getDb();
+                
+                // 1. Create mock users
+                let mock_user_ids = [];
+                for(let i=1; i<=10; i++) {
+                    let id = generateId('user');
+                    db = getDb(); // reload
+                    db.users.push({ user_id: id, name: `皜祈岫?︵${i.toString().padStart(2,'0')}_${Math.floor(Math.random()*10000)}` });
+                    mock_user_ids.push(id);
+                }
+                
+                // 2. Create group
+                let group_id = generateId('group');
+                db = getDb();
+                db.groups.push({ group_id, group_name: `憯?皜祈岫蝢斤?_${new Date().getTime()}`, created_at: new Date().toISOString()});
+                mock_user_ids.forEach(uid => db.group_members.push({ group_id, user_id: uid }));
+                
+                // 3. Generate 55 expenses
+                let split_modes = ['AA', 'ratio', 'custom'];
+                for(let exp_idx=0; exp_idx<55; exp_idx++) {
+                    let payer = mock_user_ids[Math.floor(Math.random() * mock_user_ids.length)];
+                    let k = Math.floor(Math.random() * 9) + 2; // 2 to 10
+                    let shuffled = [...mock_user_ids].sort(() => 0.5 - Math.random());
+                    let participants = shuffled.slice(0, k);
+                    if (!participants.includes(payer)) participants.push(payer);
+                    
+                    let total_cents = Math.floor(Math.random() * 149500) + 500;
+                    let split_mode = split_modes[Math.floor(Math.random() * split_modes.length)];
+                    
+                    let split_details = {};
+                    if (split_mode === 'ratio') {
+                        participants.forEach(u => split_details[u] = Math.floor(Math.random() * 5) + 1);
+                    } else if (split_mode === 'custom') {
+                        let total_allocated = 0;
+                        for(let i=0; i<participants.length-1; i++) {
+                            let limit = Math.floor((total_cents - total_allocated) / participants.length);
+                            let alloc = Math.floor(Math.random() * Math.max(1, limit)) + 1;
+                            split_details[participants[i]] = alloc;
+                            total_allocated += alloc;
+                        }
+                        split_details[participants[participants.length-1]] = total_cents - total_allocated;
+                    }
+                    
+                    let shares = distribute_expense(total_cents, participants, payer, split_mode, split_details);
+                    
+                    let expense_id = generateId('expense');
+                    db = getDb();
+                    db.group_expenses.push({
+                        expense_id, group_id, payer_id: payer, total_amount: total_cents,
+                        description: `?冽?瘨祥 ${exp_idx+1}`, split_details: JSON.stringify(shares), 
+                        date: new Date().toISOString().split('T')[0]
+                    });
+                }
+                saveDb(db);
+                
+                // 4. Calculate settlement
+                let balances = {};
+                mock_user_ids.forEach(u => balances[u] = 0);
+                
+                let expenses = db.group_expenses.filter(e => e.group_id === group_id);
+                expenses.forEach(e => {
+                    let payer = e.payer_id;
+                    let total = e.total_amount;
+                    let splits = JSON.parse(e.split_details);
+                    balances[payer] += total;
+                    for (let u_str in splits) {
+                        balances[parseInt(u_str)] -= splits[u_str];
+                    }
+                });
+                
+                let sum_balances = 0;
+                for (let b in balances) sum_balances += balances[b];
+                
+                let alg_start = performance.now();
+                let transactions = simplify_debts(balances);
+                let alg_end = performance.now();
+                
+                let total_time_ms = performance.now() - start_time;
+                let alg_time_ms = alg_end - alg_start;
+                
+                let report = {
+                    status: 'success',
+                    temporary_group_id: group_id,
+                    users_created: mock_user_ids.length,
+                    expenses_inserted: expenses.length,
+                    execution_time_total_ms: parseFloat(total_time_ms.toFixed(2)),
+                    execution_time_algorithm_only_ms: parseFloat(alg_time_ms.toFixed(4)),
+                    zero_sum_verified: sum_balances === 0,
+                    zero_sum_check_cents: sum_balances,
+                    original_people_count: mock_user_ids.length,
+                    transfers_count: transactions.length,
+                    optimized_indicator_ok: transactions.length <= (mock_user_ids.length - 1),
+                    max_allowed_transfers: mock_user_ids.length - 1,
+                    transfers: transactions.map(tx => ({
+                        from: `皜祈岫?︵${tx.from}`,
+                        to: `皜祈岫?︵${tx.to}`,
+                        amount: tx.amount / 100.0
+                    }))
+                };
+                
+                // Clean up stress test data
+                db.groups = db.groups.filter(g => g.group_id !== group_id);
+                db.group_members = db.group_members.filter(gm => gm.group_id !== group_id);
+                db.group_expenses = db.group_expenses.filter(ge => ge.group_id !== group_id);
+                db.users = db.users.filter(u => !mock_user_ids.includes(u.user_id));
+                saveDb(db);
+                
+                return mockResponse(200, report);
+            }
+            
+            return mockResponse(404, {error: 'API endpoint not mocked'});
+        } catch (e) {
+            console.error(e);
+            return mockResponse(500, {error: e.message});
+        }
+    };
+})();
 /* ==========================================================================
    Antigravity Financial Management Skill - Frontend SPA Logic
    ========================================================================== */
@@ -12,12 +570,12 @@ const STATE = {
     savingsGoals: [],
     // Category Colors for Charts
     categoryColors: {
-        '飲食': '#ff9f43',
-        '交通': '#00d2ff',
-        '娛樂': '#b5179e',
-        '帳單': '#ff2a6d',
-        '其他': '#a0aec0',
-        '儲蓄': '#00f5d4'
+        '憌脤?': '#ff9f43',
+        '鈭日?: '#00d2ff',
+        '憡?': '#b5179e',
+        '撣喳': '#ff2a6d',
+        '?嗡?': '#a0aec0',
+        '?脰?': '#00f5d4'
     }
 };
 
@@ -96,7 +654,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const todayStr = getTodayDateString();
     el.txnDate.value = todayStr;
     el.groupExpDate.value = todayStr;
-    el.dashboardDate.textContent = `📅 系統時間：${todayStr}`;
+    el.dashboardDate.textContent = `?? 蝟餌絞??嚗?{todayStr}`;
     
     // Load Users
     await loadUsers();
@@ -212,10 +770,10 @@ el.globalUserSelect.addEventListener('change', (e) => {
 function setupQuickCommandParser() {
     // Dynamic matching keyword map
     const keywordMap = {
-        '飲食': ['早餐', '午餐', '晚餐', '便當', '飲料', '咖啡', '火鍋', '點心', '下午茶', '拉麵', '麵包', '麥當勞', '超商'],
-        '交通': ['公車', '捷運', '火車', '高鐵', '計程車', '油錢', '加油', '停車費', '悠遊卡', 'Uber', '客運'],
-        '娛樂': ['電影', '遊戲', '唱歌', 'KTV', '漫畫', '玩具', '音樂', '門票', '展覽', '健身房'],
-        '帳單': ['水費', '電費', '瓦斯費', '房租', '電話費', '網費', '保險', '信用卡']
+        '憌脤?': ['?拚?', '??', '??', '靘輻', '憌脫?', '?', '?恍?', '暺?', '銝???, '?熊', '暻萄?', '暻亦??, '頞?'],
+        '鈭日?: ['?祈?', '?琿?', '?怨?', '擃', '閮?頠?, '瘝寥', '?硃', '??鞎?, '????, 'Uber', '摰ａ?'],
+        '憡?': ['?餃蔣', '?', '?望?', 'KTV', '瞍怎', '?拙', '?單?', '?蟡?, '撅汗', '?亥澈??],
+        '撣喳': ['瘞渲祥', '?餉祥', '?行鞎?, '?輻?', '?餉店鞎?, '蝬脰祥', '靽', '靽∠??]
     };
     
     el.quickCommandInput.addEventListener('input', () => {
@@ -228,9 +786,9 @@ function setupQuickCommandParser() {
         const parsed = parseQuickCommand(raw, keywordMap);
         if (parsed) {
             el.quickParsePreview.classList.remove('hidden');
-            const typeLabel = parsed.type === 'expense' ? '🔴 支出' : '🟢 收入';
+            const typeLabel = parsed.type === 'expense' ? '? ?臬' : '? ?嗅';
             el.quickParsePreview.innerHTML = `
-                <span><i class="fa-solid fa-wand-magic-sparkles margin-r"></i><b>智能解析：</b> [${typeLabel}] 分類：<b>${parsed.category}</b> | 金額：<b>$${parsed.amount}</b> | 備註：<b>${parsed.memo}</b></span>
+                <span><i class="fa-solid fa-wand-magic-sparkles margin-r"></i><b>?箄閫??嚗?/b> [${typeLabel}] ??嚗?b>${parsed.category}</b> | ??嚗?b>$${parsed.amount}</b> | ?酉嚗?b>${parsed.memo}</b></span>
             `;
         } else {
             el.quickParsePreview.classList.add('hidden');
@@ -244,7 +802,7 @@ function setupQuickCommandParser() {
         
         const parsed = parseQuickCommand(raw, keywordMap);
         if (!parsed) {
-            alert('無法解析指令。請使用格式：\n「記帳 早餐 150」（預設支出）\n「記帳 收入 薪水 50000」');
+            alert('?⊥?閫???誘??雿輻?澆?嚗n??撣??拚? 150???身?臬嚗n??撣??嗅 ?芣偌 50000??);
             return;
         }
         
@@ -268,16 +826,16 @@ function setupQuickCommandParser() {
                 el.quickParsePreview.classList.add('hidden');
                 
                 // Show floating Success message/toast
-                showToast(`成功記入一筆${parsed.type === 'expense' ? '支出' : '收入'}！金額 $${parsed.amount}`);
+                showToast(`??閮銝蝑?{parsed.type === 'expense' ? '?臬' : '?嗅'}嚗?憿?$${parsed.amount}`);
                 
                 // Reload active tab
                 switchTab(STATE.activeTab);
             } else {
                 const err = await res.json();
-                alert(`記帳失敗: ${err.error}`);
+                alert(`閮董憭望?: ${err.error}`);
             }
         } catch (e) {
-            alert(`API 串接錯誤: ${e}`);
+            alert(`API 銝脫?航炊: ${e}`);
         }
     };
     
@@ -303,10 +861,10 @@ function setupQuickCommandParser() {
 // Logic: Parsing raw text commands
 function parseQuickCommand(text, keywordMap) {
     // Expected formats: 
-    // 記帳 [類別/備忘] [金額] (default expense)
-    // 記帳 收入 [類別/備忘] [金額]
+    // 閮董 [憿/??] [??] (default expense)
+    // 閮董 ?嗅 [憿/??] [??]
     const tokens = text.split(/\s+/).filter(t => t.length > 0);
-    if (tokens.length < 3 || tokens[0] !== '記帳') {
+    if (tokens.length < 3 || tokens[0] !== '閮董') {
         return null;
     }
     
@@ -314,7 +872,7 @@ function parseQuickCommand(text, keywordMap) {
     let memoIdx = 1;
     
     // Check if Explicit Income
-    if (tokens[1] === '收入') {
+    if (tokens[1] === '?嗅') {
         type = 'income';
         memoIdx = 2;
     }
@@ -328,7 +886,7 @@ function parseQuickCommand(text, keywordMap) {
     if (isNaN(amount) || amount <= 0) return null;
     
     // Map Category based on keyword in memo
-    let category = type === 'income' ? '其他' : '其他';
+    let category = type === 'income' ? '?嗡?' : '?嗡?';
     if (type === 'expense') {
         outerLoop: for (const [cat, keywords] of Object.entries(keywordMap)) {
             for (const kw of keywords) {
@@ -340,8 +898,8 @@ function parseQuickCommand(text, keywordMap) {
         }
     } else {
         // Income categories
-        if (memo.includes('薪水') || memo.includes('薪資')) category = '其他';
-        if (memo.includes('獎金')) category = '其他';
+        if (memo.includes('?芣偌') || memo.includes('?芾?')) category = '?嗡?';
+        if (memo.includes('??')) category = '?嗡?';
     }
     
     return { type, category, memo, amount };
@@ -418,19 +976,19 @@ async function loadDashboardData() {
         
         el.recentTransactionsList.innerHTML = '';
         if (txns.length === 0) {
-            el.recentTransactionsList.innerHTML = '<div class="empty-state">尚未有任何交易紀錄</div>';
+            el.recentTransactionsList.innerHTML = '<div class="empty-state">撠?遙雿漱????/div>';
         } else {
             txns.slice(0, 5).forEach(tx => {
                 const item = document.createElement('div');
                 item.className = 'recent-item';
                 
                 const catClassMap = {
-                    '飲食': 'badge-diet',
-                    '交通': 'badge-trans',
-                    '娛樂': 'badge-entertain',
-                    '帳單': 'badge-bill',
-                    '其他': 'badge-other',
-                    '儲蓄': 'badge-savings'
+                    '憌脤?': 'badge-diet',
+                    '鈭日?: 'badge-trans',
+                    '憡?': 'badge-entertain',
+                    '撣喳': 'badge-bill',
+                    '?嗡?': 'badge-other',
+                    '?脰?': 'badge-savings'
                 };
                 const badgeClass = catClassMap[tx.category] || 'badge-other';
                 
@@ -478,9 +1036,9 @@ function renderDonutChart(categories) {
         ctx.font = '14px Inter';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('無支出開銷', 110, 110);
+        ctx.fillText('?⊥?粹???, 110, 110);
         
-        legend.innerHTML = '<div class="empty-state" style="padding: 10px 0;">無本月支出明細</div>';
+        legend.innerHTML = '<div class="empty-state" style="padding: 10px 0;">?⊥??箸?蝝?/div>';
         return;
     }
     
@@ -519,7 +1077,7 @@ function renderDonutChart(categories) {
     ctx.font = 'bold 15px Outfit';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('總支出', 110, 95);
+    ctx.fillText('蝮賣??, 110, 95);
     
     ctx.fillStyle = '#ff2a6d';
     ctx.font = 'bold 18px Outfit';
@@ -553,19 +1111,19 @@ async function loadLedgerData() {
                 const tr = document.createElement('tr');
                 
                 const catClassMap = {
-                    '飲食': 'badge-diet',
-                    '交通': 'badge-trans',
-                    '娛樂': 'badge-entertain',
-                    '帳單': 'badge-bill',
-                    '其他': 'badge-other',
-                    '儲蓄': 'badge-savings'
+                    '憌脤?': 'badge-diet',
+                    '鈭日?: 'badge-trans',
+                    '憡?': 'badge-entertain',
+                    '撣喳': 'badge-bill',
+                    '?嗡?': 'badge-other',
+                    '?脰?': 'badge-savings'
                 };
                 const badgeClass = catClassMap[tx.category] || 'badge-other';
                 
                 const isInc = tx.type === 'income';
                 const amtSign = isInc ? '+' : '-';
                 const amtClass = isInc ? 'income' : 'expense';
-                const typeLabel = isInc ? '🟢 收入' : '🔴 支出';
+                const typeLabel = isInc ? '? ?嗅' : '? ?臬';
                 
                 tr.innerHTML = `
                     <td>${tx.date}</td>
@@ -620,28 +1178,28 @@ el.addTxnForm.addEventListener('submit', async (e) => {
             const todayStr = getTodayDateString();
             el.txnDate.value = todayStr;
             
-            showToast('記帳交易新增成功！');
+            showToast('閮董鈭斗??啣???嚗?);
             loadLedgerData();
         } else {
             const err = await res.json();
-            alert(`儲存失敗：${err.error}`);
+            alert(`?脣?憭望?嚗?{err.error}`);
         }
     } catch (err) {
-        alert(`API 請求錯誤: ${err}`);
+        alert(`API 隢??航炊: ${err}`);
     }
 });
 
 // Delete Transaction
 async function deleteTransaction(txnId) {
-    if (!confirm('您確定要刪除這筆交易紀錄嗎？此動作將無法復原。')) return;
+    if (!confirm('?函Ⅱ摰??芷??鈭斗?蝝??嚗迨??撠瘜儔??)) return;
     
     try {
         const res = await fetch(`/api/transactions/${txnId}`, { method: 'DELETE' });
         if (res.ok) {
-            showToast('已成功刪除記帳紀錄。');
+            showToast('撌脫???方?撣喟???);
             loadLedgerData();
         } else {
-            alert('刪除失敗！');
+            alert('?芷憭望?嚗?);
         }
     } catch (e) {
         alert(e);
@@ -680,7 +1238,7 @@ async function loadSplittingData() {
 function renderGroupsList() {
     el.groupsListContainer.innerHTML = '';
     if (STATE.groups.length === 0) {
-        el.groupsListContainer.innerHTML = '<div class="empty-state">尚未建立任何分帳群組</div>';
+        el.groupsListContainer.innerHTML = '<div class="empty-state">撠撱箇?隞颱??董蝢斤?</div>';
         return;
     }
     
@@ -689,7 +1247,7 @@ function renderGroupsList() {
         card.className = `group-item-card ${STATE.activeGroupId === g.group_id ? 'active' : ''}`;
         card.innerHTML = `
             <h4>${g.group_name}</h4>
-            <span class="group-members-count"><i class="fa-solid fa-users"></i> ${g.members.length} 位成員</span>
+            <span class="group-members-count"><i class="fa-solid fa-users"></i> ${g.members.length} 雿???/span>
         `;
         
         card.addEventListener('click', () => {
@@ -788,7 +1346,7 @@ function switchGroupTab(tabName) {
 function renderGroupExpensesTable(expenses, members) {
     el.groupExpensesTableBody.innerHTML = '';
     if (expenses.length === 0) {
-        el.groupExpensesTableBody.innerHTML = '<tr><td colspan="5" class="table-empty">無共同消費花費紀錄</td></tr>';
+        el.groupExpensesTableBody.innerHTML = '<tr><td colspan="5" class="table-empty">?∪??鞎餉鞎餌???/td></tr>';
         return;
     }
     
@@ -813,7 +1371,7 @@ function renderGroupExpensesTable(expenses, members) {
             <td class="table-amount align-right text-coral">$${exp.total_amount.toFixed(2)}</td>
             <td>
                 <span class="category-badge badge-other" title="${splitHoverText.trim()}" style="cursor: pointer;">
-                    <i class="fa-solid fa-circle-info margin-r"></i>查看分攤
+                    <i class="fa-solid fa-circle-info margin-r"></i>?亦??
                 </span>
             </td>
         `;
@@ -833,7 +1391,7 @@ function renderSplittingParticipantsConfig(members) {
                 <span>${m.name}</span>
             </label>
             <div class="participant-split-input-wrap hidden" id="wrap-split-input-${m.user_id}">
-                <span class="split-unit-label">比例</span>
+                <span class="split-unit-label">瘥?</span>
                 <input type="number" class="split-input" id="val-split-input-${m.user_id}" value="1" min="0" step="any">
             </div>
         `;
@@ -874,12 +1432,12 @@ document.querySelectorAll('input[name="split-mode"]').forEach(radio => {
                 }
                 
                 if (mode === 'ratio') {
-                    label.textContent = '比例';
+                    label.textContent = '瘥?';
                     input.value = '1';
                     input.min = '0.1';
                     input.step = '0.1';
                 } else if (mode === 'custom') {
-                    label.textContent = '金額 $';
+                    label.textContent = '?? $';
                     input.value = '0.00';
                     input.min = '0.01';
                     input.step = '0.01';
@@ -918,7 +1476,7 @@ el.addGroupExpenseForm.addEventListener('submit', async (e) => {
     });
     
     if (participants.length === 0) {
-        alert('請至少選擇一位分攤成員！');
+        alert('隢撠??雿??斗??∴?');
         return;
     }
     
@@ -926,7 +1484,7 @@ el.addGroupExpenseForm.addEventListener('submit', async (e) => {
     if (split_mode === 'custom') {
         const sumAllocated = Object.values(split_details).reduce((acc, v) => acc + v, 0);
         if (Math.abs(sumAllocated - total_amount) > 0.02) {
-            alert(`自訂分攤總額 ($${sumAllocated.toFixed(2)}) 必須等於消費總金額 ($${total_amount.toFixed(2)})！`);
+            alert(`?芾??蝮賡? ($${sumAllocated.toFixed(2)}) 敹?蝑瘨祥蝮賡?憿?($${total_amount.toFixed(2)})嚗);
             return;
         }
         
@@ -958,11 +1516,11 @@ el.addGroupExpenseForm.addEventListener('submit', async (e) => {
             document.getElementById('mode-aa').checked = true;
             document.getElementById('mode-aa').dispatchEvent(new Event('change'));
             
-            showToast('群組消費紀錄成功新增！');
+            showToast('蝢斤?瘨祥蝝???憓?');
             selectGroup(STATE.activeGroupId);
         } else {
             const err = await res.json();
-            alert(`群組記帳失敗：${err.error}`);
+            alert(`蝢斤?閮董憭望?嚗?{err.error}`);
         }
     } catch (err) {
         alert(err);
@@ -1010,10 +1568,10 @@ async function calculateGroupSettlement() {
         
         // 2. Render optimized transfers instruction list
         el.settlementInstructionsList.innerHTML = '';
-        el.settlementStatBadge.textContent = `共 ${data.transfers_count} 筆交易`;
+        el.settlementStatBadge.textContent = `??${data.transfers_count} 蝑漱?;
         
         if (data.settlement_instructions.length === 0) {
-            el.settlementInstructionsList.innerHTML = '<div class="empty-state" style="padding: 20px 0;">🎉 全體帳務已完全結清！無須任何轉帳。</div>';
+            el.settlementInstructionsList.innerHTML = '<div class="empty-state" style="padding: 20px 0;">?? ?券?撣喳?撌脣??函?皜??⊿?隞颱?頧董??/div>';
             return;
         }
         
@@ -1024,7 +1582,7 @@ async function calculateGroupSettlement() {
                 <span class="instr-debtor">${ins.from_name}</span>
                 <i class="fa-solid fa-right-long instr-arrow-sign"></i>
                 <span class="instr-creditor">${ins.to_name}</span>
-                <span class="instr-amount-card">轉帳 $${ins.amount.toFixed(2)}</span>
+                <span class="instr-amount-card">頧董 $${ins.amount.toFixed(2)}</span>
             `;
             el.settlementInstructionsList.appendChild(item);
         });
@@ -1047,7 +1605,7 @@ el.btnShowAddMember.addEventListener('click', () => {
     list.innerHTML = '';
     
     if (nonMembers.length === 0) {
-        list.innerHTML = '<p class="text-muted" style="grid-column: 1/-1;">全體系統使用者皆已在群組中！</p>';
+        list.innerHTML = '<p class="text-muted" style="grid-column: 1/-1;">?券?蝟餌絞雿輻??撌脣蝢斤?銝哨?</p>';
     } else {
         nonMembers.forEach(u => {
             const lbl = document.createElement('label');
@@ -1071,7 +1629,7 @@ document.getElementById('add-member-form').addEventListener('submit', async (e) 
     const uIds = Array.from(checkboxes).map(chk => parseInt(chk.value));
     
     if (uIds.length === 0) {
-        alert('請選取要新增的使用者！');
+        alert('隢???啣??蝙?刻?');
         return;
     }
     
@@ -1084,10 +1642,10 @@ document.getElementById('add-member-form').addEventListener('submit', async (e) 
         
         if (res.ok) {
             document.getElementById('modal-add-member').classList.add('hidden');
-            showToast('已成功將新成員加入群組！');
+            showToast('撌脫????唳??∪??亦黎蝯?');
             loadSplittingData();
         } else {
-            alert('新增失敗');
+            alert('?啣?憭望?');
         }
     } catch (e) {
         alert(e);
@@ -1120,7 +1678,7 @@ document.getElementById('create-group-form').addEventListener('submit', async (e
     const members = Array.from(checkboxes).map(chk => parseInt(chk.value));
     
     if (members.length === 0) {
-        alert('建立群組必須至少包含一位成員！');
+        alert('撱箇?蝢斤?敹??喳??銝雿??∴?');
         return;
     }
     
@@ -1136,11 +1694,11 @@ document.getElementById('create-group-form').addEventListener('submit', async (e
             document.getElementById('create-group-form').reset();
             document.getElementById('modal-create-group').classList.add('hidden');
             
-            showToast(`群組「${group_name}」建立成功！`);
+            showToast(`蝢斤???{group_name}?遣蝡???`);
             STATE.activeGroupId = data.group_id; // Set as selected active group
             loadSplittingData();
         } else {
-            alert('群組建立失敗！');
+            alert('蝢斤?撱箇?憭望?嚗?);
         }
     } catch (err) {
         alert(err);
@@ -1183,11 +1741,11 @@ async function loadSavingsData() {
                         <div>
                             <span class="savings-curr-large">$${g.current_amount.toFixed(2)}</span>
                         </div>
-                        <span class="savings-target-label">目標 $${g.target_amount.toFixed(0)}</span>
+                        <span class="savings-target-label">?格? $${g.target_amount.toFixed(0)}</span>
                     </div>
                     <div class="savings-progress-section">
                         <div class="progress-pct-row">
-                            <span>達成率</span>
+                            <span>????/span>
                             <span class="pct-val">${g.progress_percent}%</span>
                         </div>
                         <div class="savings-track-bar">
@@ -1196,9 +1754,9 @@ async function loadSavingsData() {
                     </div>
                     <div class="savings-footer-row">
                         <span class="savings-time-left">
-                            <i class="fa-solid fa-hourglass-half"></i>距離達成還有 <b>${g.days_left}</b> 天
+                            <i class="fa-solid fa-hourglass-half"></i>頝???? <b>${g.days_left}</b> 憭?
                         </span>
-                        <button class="btn-inject-savings" data-id="${g.goal_id}" data-name="${g.goal_name}"><i class="fa-solid fa-plus-circle"></i> 存入資金</button>
+                        <button class="btn-inject-savings" data-id="${g.goal_id}" data-name="${g.goal_name}"><i class="fa-solid fa-plus-circle"></i> 摮鞈?</button>
                     </div>
                 `;
                 
@@ -1246,10 +1804,10 @@ document.getElementById('create-savings-form').addEventListener('submit', async 
             document.getElementById('create-savings-form').reset();
             document.getElementById('modal-create-savings').classList.add('hidden');
             
-            showToast(`儲蓄計畫「${goal_name}」開啟成功！`);
+            showToast(`?脰?閮??{goal_name}??????`);
             loadSavingsData();
         } else {
-            alert('儲蓄目標建立失敗！');
+            alert('?脰??格?撱箇?憭望?嚗?);
         }
     } catch (err) {
         alert(err);
@@ -1288,10 +1846,10 @@ document.getElementById('deposit-savings-form').addEventListener('submit', async
                 triggerSavingsAnimation(card);
             }
             
-            showToast(`成功注入資金 $${amount.toFixed(2)}！`);
+            showToast(`??瘜典鞈? $${amount.toFixed(2)}嚗);
             loadSavingsData();
         } else {
-            alert('存款儲蓄失敗！');
+            alert('摮狡?脰?憭望?嚗?);
         }
     } catch (err) {
         alert(err);
@@ -1329,7 +1887,7 @@ function triggerSavingsAnimation(card) {
 el.btnRunStressTest.addEventListener('click', async () => {
     // Disable Button to avoid double trigger
     el.btnRunStressTest.disabled = true;
-    el.btnRunStressTest.innerHTML = '<i class="fa-solid fa-spinner fa-spin margin-r"></i> 正在生成 50+ 交易進行壓力測試...';
+    el.btnRunStressTest.innerHTML = '<i class="fa-solid fa-spinner fa-spin margin-r"></i> 甇??? 50+ 鈭斗??脰?憯?皜祈岫...';
     
     // Clear views
     el.qaTerminalBody.innerHTML = '';
@@ -1344,11 +1902,11 @@ el.btnRunStressTest.addEventListener('click', async () => {
         el.qaTerminalBody.scrollTop = el.qaTerminalBody.scrollHeight;
     };
     
-    printLine('🚀 初始化極限壓力測試...', 'text-muted');
+    printLine('?? ???扔???葫閰?..', 'text-muted');
     
     setTimeout(async () => {
-        printLine('➡️ 向伺服器發送 POST /api/test/stress 請求...');
-        printLine('⚙️ 伺服器正在資料庫註冊 10 名壓力測試員...');
+        printLine('?∴? ?撩??潮?POST /api/test/stress 隢?...');
+        printLine('?? 隡箸??冽迤?刻??澈閮餃? 10 ???葫閰血...');
         
         try {
             const startTime = performance.now();
@@ -1357,33 +1915,33 @@ el.btnRunStressTest.addEventListener('click', async () => {
             const elapsed = performance.now() - startTime;
             
             if (res.ok && data.status === 'success') {
-                printLine('⚙️ 伺服器正在生成隨機 AA、比例及自訂金額的分帳交易紀錄...');
+                printLine('?? 隡箸??冽迤?函??璈?AA??靘??芾?????撣喃漱????..');
                 
                 setTimeout(() => {
-                    printLine(`✅ 成功寫入 <b>${data.expenses_inserted}</b> 筆交互共同消費消費！`, 'text-teal');
-                    printLine(`🔍 啟動債務簡化優化器 - 運用網路流最大抵銷演算法 (Zero-Sum DP)...`);
+                    printLine(`????撖怠 <b>${data.expenses_inserted}</b> 蝑漱鈭??鞎餅?鞎鳴?`, 'text-teal');
+                    printLine(`?? ???萄?蝪∪??芸???- ?蝬脰楝瘚?憭扳?瑟?蝞? (Zero-Sum DP)...`);
                     
                     setTimeout(() => {
-                        printLine(`📊 債務優化完成！運算耗時：<b>${data.execution_time_algorithm_only_ms.toFixed(4)} ms</b>`, 'text-teal');
-                        printLine(`⚖️ 淨額零和差值校驗：<b>${data.zero_sum_check_cents} cents</b> ($0.00 NTD)`, 'text-teal');
-                        printLine(`📈 債務簡化率：將複雜欠款精確縮減至最少 <b>${data.transfers_count} 筆</b> 轉帳。`, 'text-teal');
-                        printLine(`⭐ 品質管制標準校驗：`);
+                        printLine(`?? ?萄??芸?摰?嚗?蝞?嚗?b>${data.execution_time_algorithm_only_ms.toFixed(4)} ms</b>`, 'text-teal');
+                        printLine(`?? 瘛券??嗅?撌桀潭撽?<b>${data.zero_sum_check_cents} cents</b> ($0.00 NTD)`, 'text-teal');
+                        printLine(`?? ?萄?蝪∪???撠???甈曄移蝣箇葬皜?撠?<b>${data.transfers_count} 蝑?/b> 頧董?, 'text-teal');
+                        printLine(`潃??釭蝞∪璅??⊿?嚗);
                         
                         const verify1 = data.zero_sum_verified ? 'PASS' : 'FAIL';
                         const verify2 = data.optimized_indicator_ok ? 'PASS' : 'FAIL';
                         
-                        printLine(`   - 零和差值等於 0 校驗：<b>${verify1}</b>`, data.zero_sum_verified ? 'text-teal' : 'text-coral');
-                        printLine(`   - 最少轉帳次數 T ≤ 9 校驗：<b>${verify2}</b>`, data.optimized_indicator_ok ? 'text-teal' : 'text-coral');
-                        printLine(`🎉 壓力測試成功，演算法精度與效能均通過工業級檢驗！`, 'text-teal');
+                        printLine(`   - ?嗅?撌桀潛???0 ?⊿?嚗?b>${verify1}</b>`, data.zero_sum_verified ? 'text-teal' : 'text-coral');
+                        printLine(`   - ?撠?撣單活??T ??9 ?⊿?嚗?b>${verify2}</b>`, data.optimized_indicator_ok ? 'text-teal' : 'text-coral');
+                        printLine(`?? 憯?皜祈岫??嚗?蝞?蝎曉漲???賢???撌交平蝝炎撽?`, 'text-teal');
                         
                         // Populate results dashboard UI
                         el.qaResultsEmpty.classList.add('hidden');
                         el.qaResultsContent.classList.remove('hidden');
                         
-                        el.qaStatExpenses.textContent = `${data.expenses_inserted} 筆`;
+                        el.qaStatExpenses.textContent = `${data.expenses_inserted} 蝑;
                         el.qaStatAlgTime.textContent = `${data.execution_time_algorithm_only_ms.toFixed(3)} ms`;
-                        el.qaStatZeroSum.textContent = `$${(data.zero_sum_check_cents / 100).toFixed(2)}元`;
-                        el.qaStatTransfers.textContent = `${data.transfers_count} 筆`;
+                        el.qaStatZeroSum.textContent = `$${(data.zero_sum_check_cents / 100).toFixed(2)}?;
+                        el.qaStatTransfers.textContent = `${data.transfers_count} 蝑;
                         
                         // Render optimized transactions list
                         el.qaTransfersList.innerHTML = '';
@@ -1392,26 +1950,26 @@ el.btnRunStressTest.addEventListener('click', async () => {
                             item.className = 'qa-transfer-item';
                             item.innerHTML = `
                                 <span>${String(idx+1).padStart(2, '0')}. <b>${tx.from}</b> <i class="fa-solid fa-arrow-right-long text-coral margin-r margin-l"></i> <b>${tx.to}</b></span>
-                                <span class="amount-box">轉帳 $${tx.amount.toFixed(2)}</span>
+                                <span class="amount-box">頧董 $${tx.amount.toFixed(2)}</span>
                             `;
                             el.qaTransfersList.appendChild(item);
                         });
                         
                         // Re-enable button
                         el.btnRunStressTest.disabled = false;
-                        el.btnRunStressTest.innerHTML = '<i class="fa-solid fa-rocket margin-r"></i> 重新啟動壓力測試';
+                        el.btnRunStressTest.innerHTML = '<i class="fa-solid fa-rocket margin-r"></i> ???憯?皜祈岫';
                         
                     }, 800);
                 }, 800);
             } else {
-                printLine(`❌ 伺服器回傳錯誤: ${data.message || '未知錯誤'}`, 'text-coral');
+                printLine(`??隡箸??典??喲隤? ${data.message || '?芰?航炊'}`, 'text-coral');
                 el.btnRunStressTest.disabled = false;
-                el.btnRunStressTest.innerHTML = '<i class="fa-solid fa-rocket margin-r"></i> 重新啟動壓力測試';
+                el.btnRunStressTest.innerHTML = '<i class="fa-solid fa-rocket margin-r"></i> ???憯?皜祈岫';
             }
         } catch (e) {
-            printLine(`❌ 網路請求錯誤: ${e}`, 'text-coral');
+            printLine(`??蝬脰楝隢??航炊: ${e}`, 'text-coral');
             el.btnRunStressTest.disabled = false;
-            el.btnRunStressTest.innerHTML = '<i class="fa-solid fa-rocket margin-r"></i> 重新啟動壓力測試';
+            el.btnRunStressTest.innerHTML = '<i class="fa-solid fa-rocket margin-r"></i> ???憯?皜祈岫';
         }
     }, 500);
 });

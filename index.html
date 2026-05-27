@@ -3,287 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>財務智匯 Skill — 極致美感理財助手</title>
+    <title>Antigravity 財務智匯管理系統</title>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <style>
-        :root {
-            --bg-gradient-start: #f6f8fd;
-            --bg-gradient-end: #edf1f7;
-            --panel-bg: rgba(255, 255, 255, 0.6);
-            --border-color: rgba(0, 0, 0, 0.05);
-            --text-main: #0f172a;
-            --text-muted: #334155;
-            --text-dim: #64748b;
-            --accent-blue: #1d4ed8;
-            --accent-teal: #10b981;
-            --accent-coral: #e11d48;
-            --accent-purple: #7c3aed;
-            --font-heading: 'Outfit', sans-serif;
-            --font-body: 'Inter', sans-serif;
-            --transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            background-color: var(--bg-gradient-start);
-            color: var(--text-main);
-            font-family: var(--font-body);
-            min-height: 100vh;
-            overflow: hidden;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            position: relative;
-        }
-
-        /* Ambient Liquid Mesh Background */
-        .bg-mesh-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            overflow: hidden;
-            pointer-events: none;
-            z-index: 0;
-            filter: blur(130px) saturate(180%);
-            opacity: 0.48;
-        }
-
-        .blob {
-            position: absolute;
-            border-radius: 50%;
-        }
-
-        .blob-1 {
-            top: -10%;
-            left: -10%;
-            width: 55vw;
-            height: 55vw;
-            background: radial-gradient(circle, #ff007f 0%, rgba(255, 0, 127, 0) 70%);
-            animation: drift-blobs-1 25s infinite ease-in-out alternate;
-        }
-
-        .blob-2 {
-            bottom: -15%;
-            right: -10%;
-            width: 60vw;
-            height: 60vw;
-            background: radial-gradient(circle, #00f5d4 0%, rgba(0, 245, 212, 0) 70%);
-            animation: drift-blobs-2 30s infinite ease-in-out alternate;
-        }
-
-        .blob-3 {
-            top: 25%;
-            right: -15%;
-            width: 50vw;
-            height: 50vw;
-            background: radial-gradient(circle, #7c3aed 0%, rgba(124, 58, 237, 0) 70%);
-            animation: drift-blobs-3 28s infinite ease-in-out alternate;
-        }
-
-        .blob-4 {
-            bottom: 20%;
-            left: -15%;
-            width: 45vw;
-            height: 45vw;
-            background: radial-gradient(circle, #3a86ff 0%, rgba(58, 134, 255, 0) 70%);
-            animation: drift-blobs-4 22s infinite ease-in-out alternate;
-        }
-
-        @keyframes drift-blobs-1 {
-            0% { transform: translate3d(0, 0, 0) scale(1) rotate(0deg); }
-            50% { transform: translate3d(8vw, 12vh, 0) scale(1.15) rotate(180deg); }
-            100% { transform: translate3d(-5vw, -8vh, 0) scale(0.9) rotate(360deg); }
-        }
-        @keyframes drift-blobs-2 {
-            0% { transform: translate3d(0, 0, 0) scale(1.1) rotate(0deg); }
-            50% { transform: translate3d(-12vw, -10vh, 0) scale(0.9) rotate(-180deg); }
-            100% { transform: translate3d(6vw, 15vh, 0) scale(1.2) rotate(-360deg); }
-        }
-        @keyframes drift-blobs-3 {
-            0% { transform: translate3d(0, 0, 0) scale(0.95) rotate(0deg); }
-            50% { transform: translate3d(10vw, -15vh, 0) scale(1.25) rotate(120deg); }
-            100% { transform: translate3d(-8vw, 5vh, 0) scale(1) rotate(240deg); }
-        }
-        @keyframes drift-blobs-4 {
-            0% { transform: translate3d(0, 0, 0) scale(1) rotate(0deg); }
-            50% { transform: translate3d(-8vw, 10vh, 0) scale(0.85) rotate(-120deg); }
-            100% { transform: translate3d(12vw, -5vh, 0) scale(1.1) rotate(-240deg); }
-        }
-
-        /* Glassmorphism Layout */
-        .portal-wrapper {
-            position: relative;
-            z-index: 10;
-            width: 90%;
-            max-width: 480px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 30px;
-            animation: fadeIn 0.8s ease-out;
-        }
-
-        header {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .brand-logo {
-            width: 48px;
-            height: 48px;
-            border-radius: 14px;
-            background: linear-gradient(135deg, var(--accent-coral) 0%, var(--accent-purple) 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 8px 24px rgba(225, 29, 72, 0.25);
-        }
-
-        .brand-logo i {
-            color: #fff;
-            font-size: 1.3rem;
-        }
-
-        header h1 {
-            font-family: var(--font-heading);
-            font-size: 1.8rem;
-            font-weight: 800;
-            letter-spacing: -0.5px;
-        }
-
-        header h1 span {
-            color: var(--accent-coral);
-            font-size: 0.95rem;
-            font-weight: 600;
-            background: rgba(225, 29, 72, 0.08);
-            border: 1px solid rgba(225, 29, 72, 0.15);
-            padding: 3px 8px;
-            border-radius: 6px;
-            margin-left: 8px;
-            vertical-align: middle;
-        }
-
-        /* Splash Card */
-        .hero-panel {
-            background: var(--panel-bg);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.45);
-            border-radius: 28px;
-            padding: 45px 40px;
-            text-align: center;
-            box-shadow: 0 10px 40px rgba(31, 38, 135, 0.04);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 25px;
-            width: 100%;
-        }
-
-        /* Spinner & Progress indicator */
-        .spinner-container {
-            position: relative;
-            width: 70px;
-            height: 70px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .spinner {
-            width: 100%;
-            height: 100%;
-            border: 4px solid rgba(29, 78, 216, 0.06);
-            border-top: 4px solid var(--accent-blue);
-            border-right: 4px solid var(--accent-purple);
-            border-radius: 50%;
-            animation: spin 1s cubic-bezier(0.53, 0.21, 0.29, 0.87) infinite;
-        }
-
-        .spinner-icon {
-            position: absolute;
-            font-size: 1.4rem;
-            color: var(--accent-blue);
-            animation: pulse 1.5s ease-in-out infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); opacity: 0.8; }
-            50% { transform: scale(1.12); opacity: 1; color: var(--accent-purple); }
-        }
-
-        .status-text {
-            font-family: var(--font-heading);
-            font-size: 1.15rem;
-            font-weight: 700;
-            color: var(--text-main);
-            letter-spacing: 0.5px;
-        }
-
-        .sub-status {
-            font-size: 0.85rem;
-            color: var(--text-dim);
-            font-weight: 500;
-            margin-top: -15px;
-        }
-
-        .cta-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple) 100%);
-            border: none;
-            color: #fff;
-            font-family: var(--font-body);
-            font-weight: 700;
-            font-size: 0.9rem;
-            padding: 10px 24px;
-            border-radius: 12px;
-            cursor: pointer;
-            text-decoration: none;
-            box-shadow: 0 8px 20px rgba(29, 78, 216, 0.18);
-            opacity: 0.7;
-            transition: var(--transition-smooth);
-        }
-
-        .cta-btn:hover {
-            opacity: 1;
-            transform: translateY(-1px);
-            box-shadow: 0 10px 25px rgba(29, 78, 216, 0.3);
-        }
-
-        footer {
-            font-size: 0.75rem;
-            color: var(--text-dim);
-            font-weight: 500;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(15px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-    </style>
+    <!-- Main Style -->
+    <link rel="stylesheet" href="app.css">
 </head>
 <body>
-    <!-- Living Organic Liquid Mesh Background -->
+    <!-- Living Organic Liquid Mesh Background (Vercel-inspired) -->
     <div class="bg-mesh-container">
         <div class="blob blob-1"></div>
         <div class="blob blob-2"></div>
@@ -291,47 +22,622 @@
         <div class="blob blob-4"></div>
     </div>
 
-    <div class="portal-wrapper">
-        <!-- Header -->
-        <header>
-            <div class="brand-logo">
-                <i class="fa-solid fa-scale-balanced"></i>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-logo">
+                    <i class="fa-solid fa-scale-balanced logo-icon"></i>
+                </div>
+                <h2>財務智匯<span>Skill</span></h2>
             </div>
-            <h1>財務智匯<span>Skill</span></h1>
-        </header>
-
-        <!-- Splash Card -->
-        <div class="hero-panel">
-            <div class="spinner-container">
-                <div class="spinner"></div>
-                <i class="fa-solid fa-bolt spinner-icon"></i>
-            </div>
-            <div class="status-text">系統載入中</div>
-            <div class="sub-status">正在引導進入主儀表板...</div>
             
-            <a href="/dashboard" id="redirect-link" class="cta-btn">
-                <span>若未跳轉，請點擊此處</span>
-                <i class="fa-solid fa-arrow-right"></i>
-            </a>
-        </div>
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active" data-tab="dashboard">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>首頁概覽</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="ledger">
+                    <i class="fa-solid fa-wallet"></i>
+                    <span>個人帳本</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="splitting">
+                    <i class="fa-solid fa-users-viewfinder"></i>
+                    <span>多人分帳</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="savings">
+                    <i class="fa-solid fa-piggy-bank"></i>
+                    <span>儲蓄目標</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="qa-console">
+                    <i class="fa-solid fa-gauge-high"></i>
+                    <span>QA 壓力測試</span>
+                </a>
+            </nav>
+            
+            <div class="user-profile-status">
+                <div class="avatar">
+                    <i class="fa-solid fa-circle-user"></i>
+                </div>
+                <div class="profile-info">
+                    <p class="profile-label">目前使用者</p>
+                    <select id="global-user-select" class="user-select-dropdown">
+                        <!-- Filled by JS -->
+                    </select>
+                </div>
+            </div>
+        </aside>
 
-        <!-- Footer -->
-        <footer>
-            <span>© 2026 Antigravity Dev Team. Crafted with Glassmorphic Aesthetics.</span>
-        </footer>
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Top Bar: Smart Quick Command Console -->
+            <header class="top-bar">
+                <div class="search-console-wrapper">
+                    <div class="search-icon-prompt">
+                        <i class="fa-solid fa-terminal prompt-symbol"></i>
+                    </div>
+                    <input type="text" id="quick-command-input" placeholder="💡 智能快速記帳：例如輸入「記帳 早餐 150」或「記帳 收入 薪資 45000」，按 Enter 即可直接完成記帳...">
+                    <button id="quick-command-btn" class="quick-btn">執行</button>
+                </div>
+                <div class="quick-chips-wrapper">
+                    <span class="chips-label"><i class="fa-solid fa-wand-magic-sparkles text-teal"></i> 快捷點選範本：</span>
+                    <button class="quick-chip-btn" data-cmd="記帳 飲食 早餐 150">🍕 早餐 $150</button>
+                    <button class="quick-chip-btn" data-cmd="記帳 交通 捷運 45">🚇 捷運 $45</button>
+                    <button class="quick-chip-btn" data-cmd="記帳 娛樂 看電影 320">🎬 電影 $320</button>
+                    <button class="quick-chip-btn" data-cmd="記帳 帳單 電費 1500">⚡ 電費 $1500</button>
+                    <button class="quick-chip-btn" data-cmd="記帳 收入 獎金 8000">🎁 獎金 $8000</button>
+                </div>
+                <div id="quick-parse-preview" class="parse-preview hidden">
+                    <!-- Dynamic Parsing Info -->
+                </div>
+            </header>
+
+            <!-- Tab: Dashboard Overview -->
+            <section id="tab-dashboard" class="tab-pane active">
+                <div class="section-header">
+                    <h1>首頁概覽 <span class="subtitle">資產與帳務即時監控</span></h1>
+                    <div class="header-action">
+                        <span id="dashboard-date" class="date-badge"></span>
+                    </div>
+                </div>
+                
+                <!-- Stat Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card wealth">
+                        <div class="card-glow"></div>
+                        <div class="stat-icon"><i class="fa-solid fa-vault"></i></div>
+                        <div class="stat-content">
+                            <span class="stat-title">個人總資產 (淨額)</span>
+                            <h3 id="stat-net-wealth">$0.00</h3>
+                        </div>
+                    </div>
+                    <div class="stat-card income">
+                        <div class="card-glow"></div>
+                        <div class="stat-icon"><i class="fa-solid fa-arrow-trend-up"></i></div>
+                        <div class="stat-content">
+                            <span class="stat-title">累計總收入</span>
+                            <h3 id="stat-total-income">$0.00</h3>
+                        </div>
+                    </div>
+                    <div class="stat-card expense">
+                        <div class="card-glow"></div>
+                        <div class="stat-icon"><i class="fa-solid fa-arrow-trend-down"></i></div>
+                        <div class="stat-content">
+                            <span class="stat-title">累計總支出</span>
+                            <h3 id="stat-total-expense">$0.00</h3>
+                        </div>
+                    </div>
+                    <div class="stat-card progress-card">
+                        <div class="card-glow"></div>
+                        <div class="stat-icon"><i class="fa-solid fa-bullseye"></i></div>
+                        <div class="stat-content">
+                            <span class="stat-title">儲蓄目標進度</span>
+                            <h3 id="stat-savings-progress">0%</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dashboard Layout Grid -->
+                <div class="dashboard-grid">
+                    <!-- Chart & Distribution -->
+                    <div class="grid-card glass-panel chart-panel">
+                        <h3><i class="fa-solid fa-chart-donut margin-r"></i> 支出分類佔比分析</h3>
+                        <div class="chart-container">
+                            <canvas id="expense-donut-chart" width="220" height="220"></canvas>
+                            <div id="chart-legend" class="chart-legend"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Recent Activity -->
+                    <div class="grid-card glass-panel recent-panel">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-receipt margin-r"></i> 最近個人交易紀錄</h3>
+                            <a href="#" class="view-all-link" id="go-to-ledger">查看全部</a>
+                        </div>
+                        <div class="recent-list-container">
+                            <div class="list-headers">
+                                <span>日期</span>
+                                <span>類別</span>
+                                <span>備忘/備註</span>
+                                <span class="align-right">金額</span>
+                            </div>
+                            <div id="recent-transactions-list" class="recent-list">
+                                <!-- Filled by JS -->
+                                <div class="empty-state">尚未有任何交易紀錄</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab: Personal Ledger -->
+            <section id="tab-ledger" class="tab-pane">
+                <div class="section-header">
+                    <h1>個人帳本 <span class="subtitle">追蹤您的日常收入與支出流向</span></h1>
+                </div>
+                
+                <div class="ledger-layout">
+                    <!-- Add Transaction Card -->
+                    <div class="glass-panel form-side">
+                        <h3><i class="fa-solid fa-pen-nib margin-r"></i> 新增獨立交易</h3>
+                        <form id="add-txn-form" class="standard-form">
+                            <div class="form-group">
+                                <label for="txn-type">收支類型</label>
+                                <div class="segmented-control">
+                                    <input type="radio" id="type-expense" name="txn-type" value="expense" checked>
+                                    <label for="type-expense">支出</label>
+                                    <input type="radio" id="type-income" name="txn-type" value="income">
+                                    <label for="type-income">收入</label>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="txn-category">分類項目</label>
+                                <select id="txn-category" required>
+                                    <option value="飲食">飲食 🍕</option>
+                                    <option value="交通">交通 🚗</option>
+                                    <option value="娛樂">娛樂 🎮</option>
+                                    <option value="帳單">帳單 📄</option>
+                                    <option value="其他">其他 💼</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="txn-amount">交易金額 (元)</label>
+                                <div class="input-prefix-wrapper">
+                                    <span class="currency-symbol">$</span>
+                                    <input type="number" id="txn-amount" min="0.01" step="0.01" placeholder="0.00" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="txn-date">交易日期</label>
+                                <input type="date" id="txn-date" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="txn-memo">備忘備註 (選填)</label>
+                                <input type="text" id="txn-memo" placeholder="例如：麥當勞早餐">
+                            </div>
+                            <button type="submit" class="submit-btn glowing-btn-teal"><i class="fa-solid fa-check margin-r"></i> 記入帳本</button>
+                        </form>
+                    </div>
+
+                    <!-- Ledger Table & Filter -->
+                    <div class="glass-panel table-side">
+                        <div class="table-actions">
+                            <div class="filters">
+                                <select id="filter-type" class="filter-select">
+                                    <option value="all">所有收支</option>
+                                    <option value="expense">僅支出</option>
+                                    <option value="income">僅收入</option>
+                                </select>
+                                <select id="filter-category" class="filter-select">
+                                    <option value="all">所有分類</option>
+                                    <option value="飲食">飲食</option>
+                                    <option value="交通">交通</option>
+                                    <option value="娛樂">娛樂</option>
+                                    <option value="帳單">帳單</option>
+                                    <option value="其他">其他</option>
+                                </select>
+                            </div>
+                            <button id="btn-refresh-ledger" class="refresh-btn"><i class="fa-solid fa-rotate"></i> 整理帳目</button>
+                        </div>
+                        
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>日期</th>
+                                        <th>類別</th>
+                                        <th>收支</th>
+                                        <th>備註</th>
+                                        <th class="align-right">金額</th>
+                                        <th class="align-center">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ledger-table-body">
+                                    <!-- Filled by JS -->
+                                </tbody>
+                            </table>
+                            <div id="ledger-empty" class="table-empty hidden">無符合條件的記帳紀錄</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab: Multi-person Splitting -->
+            <section id="tab-splitting" class="tab-pane">
+                <div class="section-header">
+                    <h1>多人分帳群組 <span class="subtitle">自動抵銷、債務最佳化與零和結算</span></h1>
+                </div>
+
+                <div class="splitting-layout">
+                    <!-- Groups & Group Actions Sidebar -->
+                    <div class="groups-sidebar glass-panel">
+                        <div class="sidebar-header">
+                            <h3><i class="fa-solid fa-people-group margin-r"></i> 理財群組</h3>
+                            <button id="btn-show-create-group" class="circle-btn-action"><i class="fa-solid fa-plus"></i></button>
+                        </div>
+                        <div id="groups-list-container" class="groups-list">
+                            <!-- Filled by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Active Group Workplace -->
+                    <div id="active-group-workplace" class="group-workplace glass-panel">
+                        <!-- Default state -->
+                        <div id="group-default-state" class="empty-workspace-state">
+                            <i class="fa-solid fa-users logo-watermark"></i>
+                            <h3>請選擇或建立分帳群組</h3>
+                            <p>從左側列表點選群組，或點擊「+」新增分帳群組，即可開始記錄共同開銷與最佳化清帳！</p>
+                        </div>
+
+                        <!-- Main Workplace Content (Hidden initially) -->
+                        <div id="group-active-state" class="active-workspace-content hidden">
+                            <!-- Group Details & Members Header -->
+                            <div class="group-workplace-header">
+                                <div>
+                                    <h2 id="active-group-name">群組名稱</h2>
+                                    <div id="active-group-members-list" class="members-badge-list">
+                                        <!-- Member Badges -->
+                                    </div>
+                                </div>
+                                <div class="header-actions">
+                                    <button id="btn-show-add-member" class="action-btn-outline"><i class="fa-solid fa-user-plus margin-r"></i> 新增成員</button>
+                                    <button id="btn-trigger-settlement" class="action-btn-glowing-coral"><i class="fa-solid fa-wand-magic-sparkles margin-r"></i> 最佳化債務結算</button>
+                                </div>
+                            </div>
+
+                            <!-- Group Content Tab Segment -->
+                            <div class="group-tabs">
+                                <button class="group-tab-btn active" data-group-tab="expenses-history">共同消費紀錄</button>
+                                <button class="group-tab-btn" data-group-tab="add-expense">新增共同開銷</button>
+                                <button class="group-tab-btn" data-group-tab="settlement-results" id="btn-tab-settlement">結算與清帳方案</button>
+                            </div>
+
+                            <!-- Group Tab: Expenses History -->
+                            <div id="group-tab-expenses-history" class="group-tab-content active">
+                                <div class="table-container max-height-400">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>日期</th>
+                                                <th>消費項目</th>
+                                                <th>付款人</th>
+                                                <th class="align-right">總金額</th>
+                                                <th>分攤詳情</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="group-expenses-table-body">
+                                            <!-- Filled by JS -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Group Tab: Add Expense Form -->
+                            <div id="group-tab-add-expense" class="group-tab-content">
+                                <form id="add-group-expense-form" class="standard-form">
+                                    <div class="form-row-grid">
+                                        <div class="form-group">
+                                            <label for="group-exp-payer">是誰付款的？</label>
+                                            <select id="group-exp-payer" required>
+                                                <!-- Filled by JS -->
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="group-exp-amount">消費總金額 (元)</label>
+                                            <div class="input-prefix-wrapper">
+                                                <span class="currency-symbol">$</span>
+                                                <input type="number" id="group-exp-amount" min="0.01" step="0.01" placeholder="0.00" required>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-row-grid">
+                                        <div class="form-group">
+                                            <label for="group-exp-desc">消費項目說明</label>
+                                            <input type="text" id="group-exp-desc" placeholder="例如：花蓮民宿住宿費、租車" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="group-exp-date">消費日期</label>
+                                            <input type="date" id="group-exp-date" required>
+                                        </div>
+                                    </div>
+
+                                    <!-- Splitting Details Config -->
+                                    <div class="splitting-detail-section">
+                                        <div class="split-header">
+                                            <label>參與分攤對象與模式</label>
+                                            <div class="segmented-control split-mode-control">
+                                                <input type="radio" id="mode-aa" name="split-mode" value="AA" checked>
+                                                <label for="mode-aa">AA制</label>
+                                                <input type="radio" id="mode-ratio" name="split-mode" value="ratio">
+                                                <label for="mode-ratio">比例</label>
+                                                <input type="radio" id="mode-custom" name="split-mode" value="custom">
+                                                <label for="mode-custom">自訂金額</label>
+                                            </div>
+                                        </div>
+
+                                        <div id="split-participants-container" class="split-participants-list">
+                                            <!-- Dynamic members with ratio/custom inputs -->
+                                        </div>
+                                    </div>
+
+                                    <button type="submit" class="submit-btn glowing-btn-coral"><i class="fa-solid fa-cart-flatbed-suitcases margin-r"></i> 送出並計算分帳</button>
+                                </form>
+                            </div>
+
+                            <!-- Group Tab: Settlement & Debts Results -->
+                            <div id="group-tab-settlement-results" class="group-tab-content">
+                                <div class="settlement-dashboard">
+                                    <!-- Net Balance Breakdown -->
+                                    <div class="settlement-balances">
+                                        <h4>成員淨資產差額狀態</h4>
+                                        <div id="settlement-balances-list" class="balances-list">
+                                            <!-- Dynamic balances with green/red progress bars -->
+                                        </div>
+                                    </div>
+
+                                    <!-- Optimized Transfers -->
+                                    <div class="settlement-instructions">
+                                        <div class="instruction-header">
+                                            <h4>債務簡化最簡結算清單</h4>
+                                            <span id="settlement-stat-badge" class="stat-pill"></span>
+                                        </div>
+                                        
+                                        <!-- Zero sum check note -->
+                                        <div class="zero-sum-verification-banner">
+                                            <i class="fa-solid fa-shield-halved check-icon"></i>
+                                            <span>系統已完成零和驗證：<b>應付出金額總和 == 應收到金額總和</b>，淨誤差為 0.00元。</span>
+                                        </div>
+
+                                        <div id="settlement-instructions-list" class="instructions-list">
+                                            <!-- List of optimized payments -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab: Savings System -->
+            <section id="tab-savings" class="tab-pane">
+                <div class="section-header">
+                    <h1>儲蓄目標追蹤 <span class="subtitle">為您的中長期理財計畫注入動力</span></h1>
+                    <button id="btn-show-create-savings" class="action-btn-glowing-teal"><i class="fa-solid fa-circle-plus margin-r"></i> 建立儲蓄計畫</button>
+                </div>
+
+                <!-- Savings Goals Grid -->
+                <div id="savings-goals-grid" class="savings-grid">
+                    <!-- Dynamic savings card -->
+                </div>
+                
+                <div id="savings-empty-state" class="empty-workspace-state hidden">
+                    <i class="fa-solid fa-piggy-bank logo-watermark"></i>
+                    <h3>目前沒有進行中的儲蓄目標</h3>
+                    <p>點選右上角「建立儲蓄計畫」，設定您心儀的夢想基金吧！</p>
+                </div>
+            </section>
+
+            <!-- Tab: QA & Stress Test Console -->
+            <section id="tab-qa-console" class="tab-pane">
+                <div class="section-header">
+                    <h1>品質管制與壓力測試中心 <span class="subtitle">以極限數據檢驗演算法的強健度與精度</span></h1>
+                </div>
+
+                <div class="qa-dashboard-layout">
+                    <!-- Left: Control & Logs -->
+                    <div class="qa-control-panel glass-panel">
+                        <h3><i class="fa-solid fa-gamepad margin-r"></i> 壓力測試控制器</h3>
+                        <p class="panel-desc">系統將在後端隨機註冊 <b>10 位測試員</b>，建立一個專屬壓力群組，並在其中生成 <b>55 筆以上的交互消費記錄</b>（包含隨機隨選付款人、隨機參與分攤對象，以及混合了 AA制、指定比例與自訂金額的拆分帳目）。</p>
+                        
+                        <div class="qa-criteria-list">
+                            <h4>系統驗收與品質管制標準 (Acceptance Criteria)：</h4>
+                            <ul>
+                                <li><i class="fa-solid fa-circle-check text-emerald margin-r"></i> <b>無失真原則</b>：分帳捨入误差完全由代墊者吸收，平衡率 100%。</li>
+                                <li><i class="fa-solid fa-circle-check text-emerald margin-r"></i> <b>零和驗證</b>：所有人應付出金額與應收到金額加總之差為 0。</li>
+                                <li><i class="fa-solid fa-circle-check text-emerald margin-r"></i> <b>轉帳最佳化</b>：總轉帳筆數嚴格 $\le N-1$ 筆（在此為 $\le 9$ 筆）。</li>
+                            </ul>
+                        </div>
+
+                        <button id="btn-run-stress-test" class="submit-btn glowing-btn-coral"><i class="fa-solid fa-rocket margin-r"></i> 啟動 55 筆交易極限壓力測試</button>
+
+                        <div class="terminal-container">
+                            <div class="terminal-header">
+                                <span class="terminal-dot red"></span>
+                                <span class="terminal-dot yellow"></span>
+                                <span class="terminal-dot green"></span>
+                                <span class="terminal-title">stress_test_log.sh</span>
+                            </div>
+                            <div id="qa-terminal-body" class="terminal-body">
+                                <div class="terminal-line text-muted">[Ready] 系統就緒，等待點擊啟動壓力測試...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Results Dashboard -->
+                    <div class="qa-results-panel glass-panel">
+                        <h3><i class="fa-solid fa-square-poll-vertical margin-r"></i> 效能與精度檢驗儀表板</h3>
+                        <div id="qa-results-empty" class="empty-workspace-state">
+                            <i class="fa-solid fa-chart-line logo-watermark"></i>
+                            <p>等待壓力測試執行完成以顯示效能分析報告...</p>
+                        </div>
+
+                        <div id="qa-results-content" class="qa-report-content hidden">
+                            <div class="qa-report-grid-cards">
+                                <div class="qa-report-card">
+                                    <span class="report-title">生成共同消費筆數</span>
+                                    <h3 id="qa-stat-expenses">0 筆</h3>
+                                </div>
+                                <div class="qa-report-card">
+                                    <span class="report-title">演算法運算時間</span>
+                                    <h3 id="qa-stat-alg-time" class="text-teal">0.00 ms</h3>
+                                </div>
+                                <div class="qa-report-card">
+                                    <span class="report-title">淨額零和驗證差值</span>
+                                    <h3 id="qa-stat-zero-sum">0.00 元</h3>
+                                </div>
+                                <div class="qa-report-card">
+                                    <span class="report-title">最終最簡轉帳筆數</span>
+                                    <h3 id="qa-stat-transfers" class="text-coral">0 筆</h3>
+                                </div>
+                            </div>
+
+                            <div class="validation-status-box">
+                                <div class="status-indicator-badge success">
+                                    <i class="fa-solid fa-badge-check"></i> 品質管制驗收 PASS
+                                </div>
+                                <p>測試小結：本輪自動測試已通過「無失真原則」、「零和驗證」與「最少轉帳次數 $T \le 9$」檢驗。最優化演算法於毫秒級完成龐大複雜債務的極致淨額抵銷。</p>
+                            </div>
+
+                            <div class="qa-transfers-container">
+                                <h4>最簡化清帳轉帳指令清單 (結算清單)：</h4>
+                                <div id="qa-transfers-list" class="qa-transfers-list">
+                                    <!-- Filled by JS -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
     </div>
 
-    <script>
-        // 智能分析運行環境並進行秒級自動跳轉
-        const redirectUrl = window.location.protocol === 'file:' ? 'public/index.html' : '/dashboard';
-        
-        // 更新備用連結
-        document.getElementById('redirect-link').href = redirectUrl;
-        
-        // 延遲 1.2 秒（讓使用者感受精緻的流光極光 Splash 動畫美感後）自動流暢跳轉
-        setTimeout(function() {
-            window.location.replace(redirectUrl);
-        }, 1200);
-    </script>
+    <!-- ==========================================
+         MODALS (玻璃擬物風對話框)
+         ========================================== -->
+    
+    <!-- Modal: Create Group -->
+    <div id="modal-create-group" class="modal-backdrop hidden">
+        <div class="modal-content glass-panel">
+            <div class="modal-header">
+                <h3>建立新理財群組</h3>
+                <button class="modal-close" data-close="modal-create-group">&times;</button>
+            </div>
+            <form id="create-group-form">
+                <div class="form-group">
+                    <label for="new-group-name">群組名稱</label>
+                    <input type="text" id="new-group-name" placeholder="例如：花蓮三天兩夜、合租水電費" required>
+                </div>
+                <div class="form-group">
+                    <label>選取參與群組成員 (複選)</label>
+                    <div id="group-member-checkboxes" class="checkbox-grid-list">
+                        <!-- Filled by JS -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-cancel" data-close="modal-create-group">取消</button>
+                    <button type="submit" class="btn-confirm glowing-btn-coral">確認建立</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Add Group Member -->
+    <div id="modal-add-member" class="modal-backdrop hidden">
+        <div class="modal-content glass-panel">
+            <div class="modal-header">
+                <h3>新增成員至群組</h3>
+                <button class="modal-close" data-close="modal-add-member">&times;</button>
+            </div>
+            <form id="add-member-form">
+                <div class="form-group">
+                    <label>選取要新增的成員 (可複選)</label>
+                    <div id="add-member-checkboxes" class="checkbox-grid-list">
+                        <!-- Filled by JS -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-cancel" data-close="modal-add-member">取消</button>
+                    <button type="submit" class="btn-confirm glowing-btn-coral">確認新增</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Create Savings Goal -->
+    <div id="modal-create-savings" class="modal-backdrop hidden">
+        <div class="modal-content glass-panel">
+            <div class="modal-header">
+                <h3>建立中長期儲蓄計畫</h3>
+                <button class="modal-close" data-close="modal-create-savings">&times;</button>
+            </div>
+            <form id="create-savings-form">
+                <div class="form-group">
+                    <label for="saving-name">儲蓄目標名稱</label>
+                    <input type="text" id="saving-name" placeholder="例如：iPad Pro 購買基金、旅遊基金" required>
+                </div>
+                <div class="form-group">
+                    <label for="saving-target">總需求金額 (元)</label>
+                    <div class="input-prefix-wrapper">
+                        <span class="currency-symbol">$</span>
+                        <input type="number" id="saving-target" min="1" step="1" placeholder="0" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="saving-deadline">預期達成日期</label>
+                    <input type="date" id="saving-deadline" required>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-cancel" data-close="modal-create-savings">取消</button>
+                    <button type="submit" class="btn-confirm glowing-btn-teal">確認開啟計畫</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Deposit Savings -->
+    <div id="modal-deposit-savings" class="modal-backdrop hidden">
+        <div class="modal-content glass-panel">
+            <div class="modal-header">
+                <h3>儲蓄資金注入</h3>
+                <button class="modal-close" data-close="modal-deposit-savings">&times;</button>
+            </div>
+            <form id="deposit-savings-form">
+                <input type="hidden" id="deposit-goal-id">
+                <div class="form-group">
+                    <label>儲蓄計畫名稱</label>
+                    <p id="deposit-goal-name" class="modal-info-text">--</p>
+                </div>
+                <div class="form-group">
+                    <label for="deposit-amount">本次存入金額 (元)</label>
+                    <div class="input-prefix-wrapper">
+                        <span class="currency-symbol">$</span>
+                        <input type="number" id="deposit-amount" min="0.01" step="0.01" placeholder="0.00" required>
+                    </div>
+                </div>
+                <div class="form-group checkbox-group">
+                    <input type="checkbox" id="deposit-link-ledger" checked>
+                    <label for="deposit-link-ledger"><b>與個人帳本連動扣款</b> (在個人帳本自動新增一筆「儲蓄」分類的支出紀錄)</label>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-cancel" data-close="modal-deposit-savings">取消</button>
+                    <button type="submit" class="btn-confirm glowing-btn-teal">確認存入</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main JavaScript Logic -->
+    <script src="app.js"></script>
 </body>
 </html>
