@@ -664,8 +664,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupNavigation();
     setupEventListeners();
     
-    // Smart Command Bar Parser
-    setupQuickCommandParser();
+    // Smart Command Bar Parser Removed
+    // setupQuickCommandParser();
     
     // Load default tab
     switchTab('dashboard');
