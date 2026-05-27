@@ -1,4 +1,4 @@
-﻿// ==========================================================================
+// ==========================================================================
 // Mock Backend (Local Storage DB) to replace Python Flask for GitHub Pages
 // ==========================================================================
 (function() {
@@ -8,9 +8,9 @@
         if (!db) {
             db = {
                 users: [
-                    { user_id: 1, name: "?踵?" },
-                    { user_id: 2, name: "皜祈岫??B" },
-                    { user_id: 3, name: "皜祈岫??C" }
+                    { user_id: 1, name: "測試員 A" },
+                    { user_id: 2, name: "測試員 B" },
+                    { user_id: 3, name: "測試員 C" }
                 ],
                 transactions: [],
                 savings: [],
@@ -286,7 +286,7 @@
                     db = getDb(); // refresh
                     db.transactions.push({
                         txn_id, user_id: goal.user_id, amount: amount_cents, type: 'expense', 
-                        category: '?脰?', memo: `?脰???狡: 摮??{goal.goal_name}?, date: ds
+                        category: '儲蓄', memo: `儲蓄扣款: 存入「${goal.goal_name}」`, date: ds
                     });
                 }
                 saveDb(db);
@@ -446,14 +446,14 @@
                 for(let i=1; i<=10; i++) {
                     let id = generateId('user');
                     db = getDb(); // reload
-                    db.users.push({ user_id: id, name: `皜祈岫?︵${i.toString().padStart(2,'0')}_${Math.floor(Math.random()*10000)}` });
+                    db.users.push({ user_id: id, name: `測試員_${i.toString().padStart(2,'0')}_${Math.floor(Math.random()*10000)}` });
                     mock_user_ids.push(id);
                 }
                 
                 // 2. Create group
                 let group_id = generateId('group');
                 db = getDb();
-                db.groups.push({ group_id, group_name: `憯?皜祈岫蝢斤?_${new Date().getTime()}`, created_at: new Date().toISOString()});
+                db.groups.push({ group_id, group_name: `壓力測試群組_${new Date().getTime()}`, created_at: new Date().toISOString()});
                 mock_user_ids.forEach(uid => db.group_members.push({ group_id, user_id: uid }));
                 
                 // 3. Generate 55 expenses
@@ -488,7 +488,7 @@
                     db = getDb();
                     db.group_expenses.push({
                         expense_id, group_id, payer_id: payer, total_amount: total_cents,
-                        description: `?冽?瘨祥 ${exp_idx+1}`, split_details: JSON.stringify(shares), 
+                        description: `隨機消費 ${exp_idx+1}`, split_details: JSON.stringify(shares), 
                         date: new Date().toISOString().split('T')[0]
                     });
                 }
@@ -533,8 +533,8 @@
                     optimized_indicator_ok: transactions.length <= (mock_user_ids.length - 1),
                     max_allowed_transfers: mock_user_ids.length - 1,
                     transfers: transactions.map(tx => ({
-                        from: `皜祈岫?︵${tx.from}`,
-                        to: `皜祈岫?︵${tx.to}`,
+                        from: `測試員_${tx.from}`,
+                        to: `測試員_${tx.to}`,
                         amount: tx.amount / 100.0
                     }))
                 };
@@ -556,6 +556,7 @@
         }
     };
 })();
+
 /* ==========================================================================
    Antigravity Financial Management Skill - Frontend SPA Logic
    ========================================================================== */
@@ -570,12 +571,12 @@ const STATE = {
     savingsGoals: [],
     // Category Colors for Charts
     categoryColors: {
-        '憌脤?': '#ff9f43',
-        '鈭日?: '#00d2ff',
-        '憡?': '#b5179e',
-        '撣喳': '#ff2a6d',
-        '?嗡?': '#a0aec0',
-        '?脰?': '#00f5d4'
+        '飲食': '#ff9f43',
+        '交通': '#00d2ff',
+        '娛樂': '#b5179e',
+        '帳單': '#ff2a6d',
+        '其他': '#a0aec0',
+        '儲蓄': '#00f5d4'
     }
 };
 
@@ -654,7 +655,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const todayStr = getTodayDateString();
     el.txnDate.value = todayStr;
     el.groupExpDate.value = todayStr;
-    el.dashboardDate.textContent = `?? 蝟餌絞??嚗?{todayStr}`;
+    el.dashboardDate.textContent = `📅 系統時間：${todayStr}`;
     
     // Load Users
     await loadUsers();
@@ -770,10 +771,10 @@ el.globalUserSelect.addEventListener('change', (e) => {
 function setupQuickCommandParser() {
     // Dynamic matching keyword map
     const keywordMap = {
-        '憌脤?': ['?拚?', '??', '??', '靘輻', '憌脫?', '?', '?恍?', '暺?', '銝???, '?熊', '暻萄?', '暻亦??, '頞?'],
-        '鈭日?: ['?祈?', '?琿?', '?怨?', '擃', '閮?頠?, '瘝寥', '?硃', '??鞎?, '????, 'Uber', '摰ａ?'],
-        '憡?': ['?餃蔣', '?', '?望?', 'KTV', '瞍怎', '?拙', '?單?', '?蟡?, '撅汗', '?亥澈??],
-        '撣喳': ['瘞渲祥', '?餉祥', '?行鞎?, '?輻?', '?餉店鞎?, '蝬脰祥', '靽', '靽∠??]
+        '飲食': ['早餐', '午餐', '晚餐', '便當', '飲料', '咖啡', '火鍋', '點心', '下午茶', '拉麵', '麵包', '麥當勞', '超商'],
+        '交通': ['公車', '捷運', '火車', '高鐵', '計程車', '油錢', '加油', '停車費', '悠遊卡', 'Uber', '客運'],
+        '娛樂': ['電影', '遊戲', '唱歌', 'KTV', '漫畫', '玩具', '音樂', '門票', '展覽', '健身房'],
+        '帳單': ['水費', '電費', '瓦斯費', '房租', '電話費', '網費', '保險', '信用卡']
     };
     
     el.quickCommandInput.addEventListener('input', () => {
@@ -786,9 +787,9 @@ function setupQuickCommandParser() {
         const parsed = parseQuickCommand(raw, keywordMap);
         if (parsed) {
             el.quickParsePreview.classList.remove('hidden');
-            const typeLabel = parsed.type === 'expense' ? '? ?臬' : '? ?嗅';
+            const typeLabel = parsed.type === 'expense' ? '🔴 支出' : '🟢 收入';
             el.quickParsePreview.innerHTML = `
-                <span><i class="fa-solid fa-wand-magic-sparkles margin-r"></i><b>?箄閫??嚗?/b> [${typeLabel}] ??嚗?b>${parsed.category}</b> | ??嚗?b>$${parsed.amount}</b> | ?酉嚗?b>${parsed.memo}</b></span>
+                <span><i class="fa-solid fa-wand-magic-sparkles margin-r"></i><b>智能解析：</b> [${typeLabel}] 分類：<b>${parsed.category}</b> | 金額：<b>$${parsed.amount}</b> | 備註：<b>${parsed.memo}</b></span>
             `;
         } else {
             el.quickParsePreview.classList.add('hidden');
@@ -802,7 +803,7 @@ function setupQuickCommandParser() {
         
         const parsed = parseQuickCommand(raw, keywordMap);
         if (!parsed) {
-            alert('?⊥?閫???誘??雿輻?澆?嚗n??撣??拚? 150???身?臬嚗n??撣??嗅 ?芣偌 50000??);
+            alert('無法解析指令。請使用格式：\n「記帳 早餐 150」（預設支出）\n「記帳 收入 薪水 50000」');
             return;
         }
         
@@ -826,16 +827,16 @@ function setupQuickCommandParser() {
                 el.quickParsePreview.classList.add('hidden');
                 
                 // Show floating Success message/toast
-                showToast(`??閮銝蝑?{parsed.type === 'expense' ? '?臬' : '?嗅'}嚗?憿?$${parsed.amount}`);
+                showToast(`成功記入一筆${parsed.type === 'expense' ? '支出' : '收入'}！金額 $${parsed.amount}`);
                 
                 // Reload active tab
                 switchTab(STATE.activeTab);
             } else {
                 const err = await res.json();
-                alert(`閮董憭望?: ${err.error}`);
+                alert(`記帳失敗: ${err.error}`);
             }
         } catch (e) {
-            alert(`API 銝脫?航炊: ${e}`);
+            alert(`API 串接錯誤: ${e}`);
         }
     };
     
@@ -861,10 +862,10 @@ function setupQuickCommandParser() {
 // Logic: Parsing raw text commands
 function parseQuickCommand(text, keywordMap) {
     // Expected formats: 
-    // 閮董 [憿/??] [??] (default expense)
-    // 閮董 ?嗅 [憿/??] [??]
+    // 記帳 [類別/備忘] [金額] (default expense)
+    // 記帳 收入 [類別/備忘] [金額]
     const tokens = text.split(/\s+/).filter(t => t.length > 0);
-    if (tokens.length < 3 || tokens[0] !== '閮董') {
+    if (tokens.length < 3 || tokens[0] !== '記帳') {
         return null;
     }
     
@@ -872,7 +873,7 @@ function parseQuickCommand(text, keywordMap) {
     let memoIdx = 1;
     
     // Check if Explicit Income
-    if (tokens[1] === '?嗅') {
+    if (tokens[1] === '收入') {
         type = 'income';
         memoIdx = 2;
     }
@@ -886,7 +887,7 @@ function parseQuickCommand(text, keywordMap) {
     if (isNaN(amount) || amount <= 0) return null;
     
     // Map Category based on keyword in memo
-    let category = type === 'income' ? '?嗡?' : '?嗡?';
+    let category = type === 'income' ? '其他' : '其他';
     if (type === 'expense') {
         outerLoop: for (const [cat, keywords] of Object.entries(keywordMap)) {
             for (const kw of keywords) {
@@ -898,8 +899,8 @@ function parseQuickCommand(text, keywordMap) {
         }
     } else {
         // Income categories
-        if (memo.includes('?芣偌') || memo.includes('?芾?')) category = '?嗡?';
-        if (memo.includes('??')) category = '?嗡?';
+        if (memo.includes('薪水') || memo.includes('薪資')) category = '其他';
+        if (memo.includes('獎金')) category = '其他';
     }
     
     return { type, category, memo, amount };
@@ -976,19 +977,19 @@ async function loadDashboardData() {
         
         el.recentTransactionsList.innerHTML = '';
         if (txns.length === 0) {
-            el.recentTransactionsList.innerHTML = '<div class="empty-state">撠?遙雿漱????/div>';
+            el.recentTransactionsList.innerHTML = '<div class="empty-state">尚未有任何交易紀錄</div>';
         } else {
             txns.slice(0, 5).forEach(tx => {
                 const item = document.createElement('div');
                 item.className = 'recent-item';
                 
                 const catClassMap = {
-                    '憌脤?': 'badge-diet',
-                    '鈭日?: 'badge-trans',
-                    '憡?': 'badge-entertain',
-                    '撣喳': 'badge-bill',
-                    '?嗡?': 'badge-other',
-                    '?脰?': 'badge-savings'
+                    '飲食': 'badge-diet',
+                    '交通': 'badge-trans',
+                    '娛樂': 'badge-entertain',
+                    '帳單': 'badge-bill',
+                    '其他': 'badge-other',
+                    '儲蓄': 'badge-savings'
                 };
                 const badgeClass = catClassMap[tx.category] || 'badge-other';
                 
@@ -1036,9 +1037,9 @@ function renderDonutChart(categories) {
         ctx.font = '14px Inter';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('?⊥?粹???, 110, 110);
+        ctx.fillText('無支出開銷', 110, 110);
         
-        legend.innerHTML = '<div class="empty-state" style="padding: 10px 0;">?⊥??箸?蝝?/div>';
+        legend.innerHTML = '<div class="empty-state" style="padding: 10px 0;">無本月支出明細</div>';
         return;
     }
     
@@ -1077,7 +1078,7 @@ function renderDonutChart(categories) {
     ctx.font = 'bold 15px Outfit';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('蝮賣??, 110, 95);
+    ctx.fillText('總支出', 110, 95);
     
     ctx.fillStyle = '#ff2a6d';
     ctx.font = 'bold 18px Outfit';
@@ -1111,19 +1112,19 @@ async function loadLedgerData() {
                 const tr = document.createElement('tr');
                 
                 const catClassMap = {
-                    '憌脤?': 'badge-diet',
-                    '鈭日?: 'badge-trans',
-                    '憡?': 'badge-entertain',
-                    '撣喳': 'badge-bill',
-                    '?嗡?': 'badge-other',
-                    '?脰?': 'badge-savings'
+                    '飲食': 'badge-diet',
+                    '交通': 'badge-trans',
+                    '娛樂': 'badge-entertain',
+                    '帳單': 'badge-bill',
+                    '其他': 'badge-other',
+                    '儲蓄': 'badge-savings'
                 };
                 const badgeClass = catClassMap[tx.category] || 'badge-other';
                 
                 const isInc = tx.type === 'income';
                 const amtSign = isInc ? '+' : '-';
                 const amtClass = isInc ? 'income' : 'expense';
-                const typeLabel = isInc ? '? ?嗅' : '? ?臬';
+                const typeLabel = isInc ? '🟢 收入' : '🔴 支出';
                 
                 tr.innerHTML = `
                     <td>${tx.date}</td>
@@ -1178,28 +1179,28 @@ el.addTxnForm.addEventListener('submit', async (e) => {
             const todayStr = getTodayDateString();
             el.txnDate.value = todayStr;
             
-            showToast('閮董鈭斗??啣???嚗?);
+            showToast('記帳交易新增成功！');
             loadLedgerData();
         } else {
             const err = await res.json();
-            alert(`?脣?憭望?嚗?{err.error}`);
+            alert(`儲存失敗：${err.error}`);
         }
     } catch (err) {
-        alert(`API 隢??航炊: ${err}`);
+        alert(`API 請求錯誤: ${err}`);
     }
 });
 
 // Delete Transaction
 async function deleteTransaction(txnId) {
-    if (!confirm('?函Ⅱ摰??芷??鈭斗?蝝??嚗迨??撠瘜儔??)) return;
+    if (!confirm('您確定要刪除這筆交易紀錄嗎？此動作將無法復原。')) return;
     
     try {
         const res = await fetch(`/api/transactions/${txnId}`, { method: 'DELETE' });
         if (res.ok) {
-            showToast('撌脫???方?撣喟???);
+            showToast('已成功刪除記帳紀錄。');
             loadLedgerData();
         } else {
-            alert('?芷憭望?嚗?);
+            alert('刪除失敗！');
         }
     } catch (e) {
         alert(e);
@@ -1238,7 +1239,7 @@ async function loadSplittingData() {
 function renderGroupsList() {
     el.groupsListContainer.innerHTML = '';
     if (STATE.groups.length === 0) {
-        el.groupsListContainer.innerHTML = '<div class="empty-state">撠撱箇?隞颱??董蝢斤?</div>';
+        el.groupsListContainer.innerHTML = '<div class="empty-state">尚未建立任何分帳群組</div>';
         return;
     }
     
@@ -1247,7 +1248,7 @@ function renderGroupsList() {
         card.className = `group-item-card ${STATE.activeGroupId === g.group_id ? 'active' : ''}`;
         card.innerHTML = `
             <h4>${g.group_name}</h4>
-            <span class="group-members-count"><i class="fa-solid fa-users"></i> ${g.members.length} 雿???/span>
+            <span class="group-members-count"><i class="fa-solid fa-users"></i> ${g.members.length} 位成員</span>
         `;
         
         card.addEventListener('click', () => {
@@ -1346,7 +1347,7 @@ function switchGroupTab(tabName) {
 function renderGroupExpensesTable(expenses, members) {
     el.groupExpensesTableBody.innerHTML = '';
     if (expenses.length === 0) {
-        el.groupExpensesTableBody.innerHTML = '<tr><td colspan="5" class="table-empty">?∪??鞎餉鞎餌???/td></tr>';
+        el.groupExpensesTableBody.innerHTML = '<tr><td colspan="5" class="table-empty">無共同消費花費紀錄</td></tr>';
         return;
     }
     
@@ -1371,7 +1372,7 @@ function renderGroupExpensesTable(expenses, members) {
             <td class="table-amount align-right text-coral">$${exp.total_amount.toFixed(2)}</td>
             <td>
                 <span class="category-badge badge-other" title="${splitHoverText.trim()}" style="cursor: pointer;">
-                    <i class="fa-solid fa-circle-info margin-r"></i>?亦??
+                    <i class="fa-solid fa-circle-info margin-r"></i>查看分攤
                 </span>
             </td>
         `;
@@ -1391,7 +1392,7 @@ function renderSplittingParticipantsConfig(members) {
                 <span>${m.name}</span>
             </label>
             <div class="participant-split-input-wrap hidden" id="wrap-split-input-${m.user_id}">
-                <span class="split-unit-label">瘥?</span>
+                <span class="split-unit-label">比例</span>
                 <input type="number" class="split-input" id="val-split-input-${m.user_id}" value="1" min="0" step="any">
             </div>
         `;
@@ -1432,12 +1433,12 @@ document.querySelectorAll('input[name="split-mode"]').forEach(radio => {
                 }
                 
                 if (mode === 'ratio') {
-                    label.textContent = '瘥?';
+                    label.textContent = '比例';
                     input.value = '1';
                     input.min = '0.1';
                     input.step = '0.1';
                 } else if (mode === 'custom') {
-                    label.textContent = '?? $';
+                    label.textContent = '金額 $';
                     input.value = '0.00';
                     input.min = '0.01';
                     input.step = '0.01';
@@ -1476,7 +1477,7 @@ el.addGroupExpenseForm.addEventListener('submit', async (e) => {
     });
     
     if (participants.length === 0) {
-        alert('隢撠??雿??斗??∴?');
+        alert('請至少選擇一位分攤成員！');
         return;
     }
     
@@ -1484,7 +1485,7 @@ el.addGroupExpenseForm.addEventListener('submit', async (e) => {
     if (split_mode === 'custom') {
         const sumAllocated = Object.values(split_details).reduce((acc, v) => acc + v, 0);
         if (Math.abs(sumAllocated - total_amount) > 0.02) {
-            alert(`?芾??蝮賡? ($${sumAllocated.toFixed(2)}) 敹?蝑瘨祥蝮賡?憿?($${total_amount.toFixed(2)})嚗);
+            alert(`自訂分攤總額 ($${sumAllocated.toFixed(2)}) 必須等於消費總金額 ($${total_amount.toFixed(2)})！`);
             return;
         }
         
@@ -1516,11 +1517,11 @@ el.addGroupExpenseForm.addEventListener('submit', async (e) => {
             document.getElementById('mode-aa').checked = true;
             document.getElementById('mode-aa').dispatchEvent(new Event('change'));
             
-            showToast('蝢斤?瘨祥蝝???憓?');
+            showToast('群組消費紀錄成功新增！');
             selectGroup(STATE.activeGroupId);
         } else {
             const err = await res.json();
-            alert(`蝢斤?閮董憭望?嚗?{err.error}`);
+            alert(`群組記帳失敗：${err.error}`);
         }
     } catch (err) {
         alert(err);
@@ -1568,10 +1569,10 @@ async function calculateGroupSettlement() {
         
         // 2. Render optimized transfers instruction list
         el.settlementInstructionsList.innerHTML = '';
-        el.settlementStatBadge.textContent = `??${data.transfers_count} 蝑漱?;
+        el.settlementStatBadge.textContent = `共 ${data.transfers_count} 筆交易`;
         
         if (data.settlement_instructions.length === 0) {
-            el.settlementInstructionsList.innerHTML = '<div class="empty-state" style="padding: 20px 0;">?? ?券?撣喳?撌脣??函?皜??⊿?隞颱?頧董??/div>';
+            el.settlementInstructionsList.innerHTML = '<div class="empty-state" style="padding: 20px 0;">🎉 全體帳務已完全結清！無須任何轉帳。</div>';
             return;
         }
         
@@ -1582,7 +1583,7 @@ async function calculateGroupSettlement() {
                 <span class="instr-debtor">${ins.from_name}</span>
                 <i class="fa-solid fa-right-long instr-arrow-sign"></i>
                 <span class="instr-creditor">${ins.to_name}</span>
-                <span class="instr-amount-card">頧董 $${ins.amount.toFixed(2)}</span>
+                <span class="instr-amount-card">轉帳 $${ins.amount.toFixed(2)}</span>
             `;
             el.settlementInstructionsList.appendChild(item);
         });
@@ -1605,7 +1606,7 @@ el.btnShowAddMember.addEventListener('click', () => {
     list.innerHTML = '';
     
     if (nonMembers.length === 0) {
-        list.innerHTML = '<p class="text-muted" style="grid-column: 1/-1;">?券?蝟餌絞雿輻??撌脣蝢斤?銝哨?</p>';
+        list.innerHTML = '<p class="text-muted" style="grid-column: 1/-1;">全體系統使用者皆已在群組中！</p>';
     } else {
         nonMembers.forEach(u => {
             const lbl = document.createElement('label');
@@ -1629,7 +1630,7 @@ document.getElementById('add-member-form').addEventListener('submit', async (e) 
     const uIds = Array.from(checkboxes).map(chk => parseInt(chk.value));
     
     if (uIds.length === 0) {
-        alert('隢???啣??蝙?刻?');
+        alert('請選取要新增的使用者！');
         return;
     }
     
@@ -1642,10 +1643,10 @@ document.getElementById('add-member-form').addEventListener('submit', async (e) 
         
         if (res.ok) {
             document.getElementById('modal-add-member').classList.add('hidden');
-            showToast('撌脫????唳??∪??亦黎蝯?');
+            showToast('已成功將新成員加入群組！');
             loadSplittingData();
         } else {
-            alert('?啣?憭望?');
+            alert('新增失敗');
         }
     } catch (e) {
         alert(e);
@@ -1678,7 +1679,7 @@ document.getElementById('create-group-form').addEventListener('submit', async (e
     const members = Array.from(checkboxes).map(chk => parseInt(chk.value));
     
     if (members.length === 0) {
-        alert('撱箇?蝢斤?敹??喳??銝雿??∴?');
+        alert('建立群組必須至少包含一位成員！');
         return;
     }
     
@@ -1694,11 +1695,11 @@ document.getElementById('create-group-form').addEventListener('submit', async (e
             document.getElementById('create-group-form').reset();
             document.getElementById('modal-create-group').classList.add('hidden');
             
-            showToast(`蝢斤???{group_name}?遣蝡???`);
+            showToast(`群組「${group_name}」建立成功！`);
             STATE.activeGroupId = data.group_id; // Set as selected active group
             loadSplittingData();
         } else {
-            alert('蝢斤?撱箇?憭望?嚗?);
+            alert('群組建立失敗！');
         }
     } catch (err) {
         alert(err);
@@ -1741,11 +1742,11 @@ async function loadSavingsData() {
                         <div>
                             <span class="savings-curr-large">$${g.current_amount.toFixed(2)}</span>
                         </div>
-                        <span class="savings-target-label">?格? $${g.target_amount.toFixed(0)}</span>
+                        <span class="savings-target-label">目標 $${g.target_amount.toFixed(0)}</span>
                     </div>
                     <div class="savings-progress-section">
                         <div class="progress-pct-row">
-                            <span>????/span>
+                            <span>達成率</span>
                             <span class="pct-val">${g.progress_percent}%</span>
                         </div>
                         <div class="savings-track-bar">
@@ -1754,9 +1755,9 @@ async function loadSavingsData() {
                     </div>
                     <div class="savings-footer-row">
                         <span class="savings-time-left">
-                            <i class="fa-solid fa-hourglass-half"></i>頝???? <b>${g.days_left}</b> 憭?
+                            <i class="fa-solid fa-hourglass-half"></i>距離達成還有 <b>${g.days_left}</b> 天
                         </span>
-                        <button class="btn-inject-savings" data-id="${g.goal_id}" data-name="${g.goal_name}"><i class="fa-solid fa-plus-circle"></i> 摮鞈?</button>
+                        <button class="btn-inject-savings" data-id="${g.goal_id}" data-name="${g.goal_name}"><i class="fa-solid fa-plus-circle"></i> 存入資金</button>
                     </div>
                 `;
                 
@@ -1804,10 +1805,10 @@ document.getElementById('create-savings-form').addEventListener('submit', async 
             document.getElementById('create-savings-form').reset();
             document.getElementById('modal-create-savings').classList.add('hidden');
             
-            showToast(`?脰?閮??{goal_name}??????`);
+            showToast(`儲蓄計畫「${goal_name}」開啟成功！`);
             loadSavingsData();
         } else {
-            alert('?脰??格?撱箇?憭望?嚗?);
+            alert('儲蓄目標建立失敗！');
         }
     } catch (err) {
         alert(err);
@@ -1846,10 +1847,10 @@ document.getElementById('deposit-savings-form').addEventListener('submit', async
                 triggerSavingsAnimation(card);
             }
             
-            showToast(`??瘜典鞈? $${amount.toFixed(2)}嚗);
+            showToast(`成功注入資金 $${amount.toFixed(2)}！`);
             loadSavingsData();
         } else {
-            alert('摮狡?脰?憭望?嚗?);
+            alert('存款儲蓄失敗！');
         }
     } catch (err) {
         alert(err);
@@ -1887,7 +1888,7 @@ function triggerSavingsAnimation(card) {
 el.btnRunStressTest.addEventListener('click', async () => {
     // Disable Button to avoid double trigger
     el.btnRunStressTest.disabled = true;
-    el.btnRunStressTest.innerHTML = '<i class="fa-solid fa-spinner fa-spin margin-r"></i> 甇??? 50+ 鈭斗??脰?憯?皜祈岫...';
+    el.btnRunStressTest.innerHTML = '<i class="fa-solid fa-spinner fa-spin margin-r"></i> 正在生成 50+ 交易進行壓力測試...';
     
     // Clear views
     el.qaTerminalBody.innerHTML = '';
@@ -1902,11 +1903,11 @@ el.btnRunStressTest.addEventListener('click', async () => {
         el.qaTerminalBody.scrollTop = el.qaTerminalBody.scrollHeight;
     };
     
-    printLine('?? ???扔???葫閰?..', 'text-muted');
+    printLine('🚀 初始化極限壓力測試...', 'text-muted');
     
     setTimeout(async () => {
-        printLine('?∴? ?撩??潮?POST /api/test/stress 隢?...');
-        printLine('?? 隡箸??冽迤?刻??澈閮餃? 10 ???葫閰血...');
+        printLine('➡️ 向伺服器發送 POST /api/test/stress 請求...');
+        printLine('⚙️ 伺服器正在資料庫註冊 10 名壓力測試員...');
         
         try {
             const startTime = performance.now();
@@ -1915,33 +1916,33 @@ el.btnRunStressTest.addEventListener('click', async () => {
             const elapsed = performance.now() - startTime;
             
             if (res.ok && data.status === 'success') {
-                printLine('?? 隡箸??冽迤?函??璈?AA??靘??芾?????撣喃漱????..');
+                printLine('⚙️ 伺服器正在生成隨機 AA、比例及自訂金額的分帳交易紀錄...');
                 
                 setTimeout(() => {
-                    printLine(`????撖怠 <b>${data.expenses_inserted}</b> 蝑漱鈭??鞎餅?鞎鳴?`, 'text-teal');
-                    printLine(`?? ???萄?蝪∪??芸???- ?蝬脰楝瘚?憭扳?瑟?蝞? (Zero-Sum DP)...`);
+                    printLine(`✅ 成功寫入 <b>${data.expenses_inserted}</b> 筆交互共同消費消費！`, 'text-teal');
+                    printLine(`🔍 啟動債務簡化優化器 - 運用網路流最大抵銷演算法 (Zero-Sum DP)...`);
                     
                     setTimeout(() => {
-                        printLine(`?? ?萄??芸?摰?嚗?蝞?嚗?b>${data.execution_time_algorithm_only_ms.toFixed(4)} ms</b>`, 'text-teal');
-                        printLine(`?? 瘛券??嗅?撌桀潭撽?<b>${data.zero_sum_check_cents} cents</b> ($0.00 NTD)`, 'text-teal');
-                        printLine(`?? ?萄?蝪∪???撠???甈曄移蝣箇葬皜?撠?<b>${data.transfers_count} 蝑?/b> 頧董?, 'text-teal');
-                        printLine(`潃??釭蝞∪璅??⊿?嚗);
+                        printLine(`📊 債務優化完成！運算耗時：<b>${data.execution_time_algorithm_only_ms.toFixed(4)} ms</b>`, 'text-teal');
+                        printLine(`⚖️ 淨額零和差值校驗：<b>${data.zero_sum_check_cents} cents</b> ($0.00 NTD)`, 'text-teal');
+                        printLine(`📈 債務簡化率：將複雜欠款精確縮減至最少 <b>${data.transfers_count} 筆</b> 轉帳。`, 'text-teal');
+                        printLine(`⭐ 品質管制標準校驗：`);
                         
                         const verify1 = data.zero_sum_verified ? 'PASS' : 'FAIL';
                         const verify2 = data.optimized_indicator_ok ? 'PASS' : 'FAIL';
                         
-                        printLine(`   - ?嗅?撌桀潛???0 ?⊿?嚗?b>${verify1}</b>`, data.zero_sum_verified ? 'text-teal' : 'text-coral');
-                        printLine(`   - ?撠?撣單活??T ??9 ?⊿?嚗?b>${verify2}</b>`, data.optimized_indicator_ok ? 'text-teal' : 'text-coral');
-                        printLine(`?? 憯?皜祈岫??嚗?蝞?蝎曉漲???賢???撌交平蝝炎撽?`, 'text-teal');
+                        printLine(`   - 零和差值等於 0 校驗：<b>${verify1}</b>`, data.zero_sum_verified ? 'text-teal' : 'text-coral');
+                        printLine(`   - 最少轉帳次數 T ≤ 9 校驗：<b>${verify2}</b>`, data.optimized_indicator_ok ? 'text-teal' : 'text-coral');
+                        printLine(`🎉 壓力測試成功，演算法精度與效能均通過工業級檢驗！`, 'text-teal');
                         
                         // Populate results dashboard UI
                         el.qaResultsEmpty.classList.add('hidden');
                         el.qaResultsContent.classList.remove('hidden');
                         
-                        el.qaStatExpenses.textContent = `${data.expenses_inserted} 蝑;
+                        el.qaStatExpenses.textContent = `${data.expenses_inserted} 筆`;
                         el.qaStatAlgTime.textContent = `${data.execution_time_algorithm_only_ms.toFixed(3)} ms`;
-                        el.qaStatZeroSum.textContent = `$${(data.zero_sum_check_cents / 100).toFixed(2)}?;
-                        el.qaStatTransfers.textContent = `${data.transfers_count} 蝑;
+                        el.qaStatZeroSum.textContent = `$${(data.zero_sum_check_cents / 100).toFixed(2)}元`;
+                        el.qaStatTransfers.textContent = `${data.transfers_count} 筆`;
                         
                         // Render optimized transactions list
                         el.qaTransfersList.innerHTML = '';
@@ -1950,26 +1951,26 @@ el.btnRunStressTest.addEventListener('click', async () => {
                             item.className = 'qa-transfer-item';
                             item.innerHTML = `
                                 <span>${String(idx+1).padStart(2, '0')}. <b>${tx.from}</b> <i class="fa-solid fa-arrow-right-long text-coral margin-r margin-l"></i> <b>${tx.to}</b></span>
-                                <span class="amount-box">頧董 $${tx.amount.toFixed(2)}</span>
+                                <span class="amount-box">轉帳 $${tx.amount.toFixed(2)}</span>
                             `;
                             el.qaTransfersList.appendChild(item);
                         });
                         
                         // Re-enable button
                         el.btnRunStressTest.disabled = false;
-                        el.btnRunStressTest.innerHTML = '<i class="fa-solid fa-rocket margin-r"></i> ???憯?皜祈岫';
+                        el.btnRunStressTest.innerHTML = '<i class="fa-solid fa-rocket margin-r"></i> 重新啟動壓力測試';
                         
                     }, 800);
                 }, 800);
             } else {
-                printLine(`??隡箸??典??喲隤? ${data.message || '?芰?航炊'}`, 'text-coral');
+                printLine(`❌ 伺服器回傳錯誤: ${data.message || '未知錯誤'}`, 'text-coral');
                 el.btnRunStressTest.disabled = false;
-                el.btnRunStressTest.innerHTML = '<i class="fa-solid fa-rocket margin-r"></i> ???憯?皜祈岫';
+                el.btnRunStressTest.innerHTML = '<i class="fa-solid fa-rocket margin-r"></i> 重新啟動壓力測試';
             }
         } catch (e) {
-            printLine(`??蝬脰楝隢??航炊: ${e}`, 'text-coral');
+            printLine(`❌ 網路請求錯誤: ${e}`, 'text-coral');
             el.btnRunStressTest.disabled = false;
-            el.btnRunStressTest.innerHTML = '<i class="fa-solid fa-rocket margin-r"></i> ???憯?皜祈岫';
+            el.btnRunStressTest.innerHTML = '<i class="fa-solid fa-rocket margin-r"></i> 重新啟動壓力測試';
         }
     }, 500);
 });
